@@ -1,0 +1,48 @@
+# Node modules
+node_modules/
+BACKEND/node_modules/
+frontend/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
+BACKEND/.env
+frontend/.env
+
+# Build output
+BACKEND/dist/
+BACKEND/build/
+frontend/dist/
+frontend/build/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Misc
+*.local
+*.cache
+*.swp
+
+# Test coverage
+coverage/
+
+# Optional: ignore temp files
+BACKEND/tempCodeRunnerFile.js
+
+# Ignore lock files if you want (optional, but not always recommended)
+# package-lock.json
+yarn.lock
+pnpm-lock.yaml 
