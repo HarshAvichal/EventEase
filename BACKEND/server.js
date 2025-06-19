@@ -55,6 +55,18 @@ app.get("/", (req, res) => {
 // Start reminder scheduler
 scheduleReminders();
 
+// Add global error handlers for better debugging
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', reason);
+    process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+});
+
 // Start the server
 app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`);
 });
