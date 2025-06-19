@@ -103,14 +103,14 @@ function MyEvents() {
               .map(event => {
                 console.log('Rendering live event:', event.title, 'isLive will be set to true');
                 return (
-                  <EventCard
-                    key={event._id || event.id}
-                    event={{ ...event, _id: event._id || event.id }}
-                    participantCount={participantCounts[event._id || event.id]}
-                    isRSVPd={true}
-                    isLive={true}
-                    onJoin={() => window.open(event.meetingLink, '_blank')}
-                  />
+              <EventCard
+                key={event._id || event.id}
+                event={{ ...event, _id: event._id || event.id }}
+                participantCount={participantCounts[event._id || event.id]}
+                isRSVPd={true}
+                isLive={true}
+                onJoin={() => window.open(event.meetingLink, '_blank')}
+              />
                 );
               })}
           </div>
@@ -132,13 +132,13 @@ function MyEvents() {
                 return aDate.valueOf() - bDate.valueOf(); // soonest first
               })
               .map(event => (
-                <EventCard
-                  key={event._id || event.id}
-                  event={{ ...event, _id: event._id || event.id }}
-                  participantCount={participantCounts[event._id || event.id]}
-                  isRSVPd={true}
-                />
-              ))}
+              <EventCard
+                key={event._id || event.id}
+                event={{ ...event, _id: event._id || event.id }}
+                participantCount={participantCounts[event._id || event.id]}
+                isRSVPd={true}
+              />
+            ))}
           </div>
         )}
       </div>
