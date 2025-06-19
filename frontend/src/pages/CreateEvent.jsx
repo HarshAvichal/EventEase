@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import dayjs from 'dayjs';
-import utc from 'dayjs-plugin-utc';
+import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
 
 // Material UI Imports
