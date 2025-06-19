@@ -278,6 +278,7 @@ function CompletedEvents() {
         event={feedbackEvent}
         participantId={null} // Organizer, so no feedback form
         authAxios={authAxios}
+        attendedCount={feedbackEvent?.attendedCount}
       />
     </Fragment>
   );

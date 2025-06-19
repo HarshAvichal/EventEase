@@ -2,7 +2,7 @@ import RSVP from '../models/Rsvp.js';
 import Event from '../models/Event.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
-import { sendEmail } from '../utils/emailSender.js';
+import { sendEmail, getBrandedEmailTemplate } from '../utils/emailSender.js';
 
 // RSVP for an Event
 export const rsvpEvent = async (req, res, next) => {
@@ -63,18 +63,20 @@ export const rsvpEvent = async (req, res, next) => {
         // Send confirmation email
         const participant = await User.findById(req.user.id);
         if (participant) {
-            const emailContent = `
-                <p>Dear ${participant.firstName},</p>
-                <p>You have successfully registered for the event <strong>${event.title}</strong>.</p>
-                <p><strong>Event Details:</strong></p>
-                <ul>
-                    <li>Date: ${event.date}</li>
-                    <li>Time: ${event.startTime} - ${event.endTime} (EST)</li>
-                    <li>Meeting Link: <a href="${event.meetingLink}">Join the event</a></li>
-                </ul>
-                <p>Thank you for registering! We look forward to seeing you at the event.</p>
-            `;
-
+            const emailContent = getBrandedEmailTemplate(
+                `RSVP Confirmation: ${event.title}`,
+                `<p style='color:#333;'>Dear <b>${participant.firstName}</b>,</p>
+                 <p style='color:#333;'>You have successfully registered for the event <strong>${event.title}</strong>.</p>
+                 <p style='color:#333;'><strong>Event Details:</strong></p>
+                 <ul style='color:#333;'>
+                     <li>Date: ${event.date}</li>
+                     <li>Time: ${event.startTime} - ${event.endTime} (EST)</li>
+                 </ul>
+                 <div style='text-align:center;margin:24px 0;'>
+                   <a href='${event.meetingLink}' style='background:#1a237e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;'>Join Event</a>
+                 </div>
+                 <p style='color:#888;'>Thank you for registering! We look forward to seeing you at the event.</p>`
+            );
             await sendEmail(
                 participant.email,
                 `RSVP Confirmation: ${event.title}`,
@@ -145,17 +147,21 @@ export const cancelRSVP = async (req, res, next) => {
         // Send cancellation email
         const participant = await User.findById(req.user.id);
         if (participant) {
-            await sendEmail(
-                participant.email,
+            const emailContent = getBrandedEmailTemplate(
                 `RSVP Canceled: ${event.title}`,
-                `<p>Dear ${participant.firstName},</p>
-                 <p>You have successfully canceled your RSVP for the event <strong>${event.title}</strong>.</p>
-                 <p><strong>Event Details:</strong></p>
-                 <ul>
+                `<p style='color:#333;'>Dear <b>${participant.firstName}</b>,</p>
+                 <p style='color:#333;'>You have successfully canceled your RSVP for the event <strong>${event.title}</strong>.</p>
+                 <p style='color:#333;'><strong>Event Details:</strong></p>
+                 <ul style='color:#333;'>
                      <li>Date: ${event.date}</li>
                      <li>Time: ${event.startTime} - ${event.endTime} (EST)</li>
                  </ul>
-                 <p>We hope to see you at our future events.</p>`
+                 <p style='color:#888;'>We hope to see you at our future events.</p>`
+            );
+            await sendEmail(
+                participant.email,
+                `RSVP Canceled: ${event.title}`,
+                emailContent
             );
         }
 

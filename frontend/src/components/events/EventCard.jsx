@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 
 function EventCard({ event, participantCount, onRegister, isRSVPd, isLive, onJoin }) {
   const navigate = useNavigate();
+  console.log('EventCard render:', event.title, 'isLive:', isLive, 'isRSVPd:', isRSVPd);
   if (isLive) {
     console.log('Live EventCard event:', event);
   }
@@ -15,12 +16,8 @@ function EventCard({ event, participantCount, onRegister, isRSVPd, isLive, onJoi
           ? `${event.organizerId.firstName} ${event.organizerId.lastName}`
           : event.organizerName || event.organizer || 'Unknown'}
         {isLive && (
-          <span className="ml-2 flex items-center">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
-            </span>
-            <span className="ml-1 text-xs text-red-600 font-bold">LIVE</span>
+          <span className="ml-2 flex items-center align-middle">
+            <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
           </span>
         )}
       </div>

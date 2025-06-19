@@ -93,16 +93,26 @@ function MyEvents() {
           <div className="text-center text-gray-400">No live events right now.</div>
         ) : (
           <div className="space-y-4">
-            {liveEvents.map(event => (
-              <EventCard
-                key={event._id || event.id}
-                event={{ ...event, _id: event._id || event.id }}
-                participantCount={participantCounts[event._id || event.id]}
-                isRSVPd={true}
-                isLive={true}
-                onJoin={() => window.open(event.meetingLink, '_blank')}
-              />
-            ))}
+            {liveEvents
+              .slice()
+              .sort((a, b) => {
+                const aDate = dayjs(a.date + 'T' + a.endTime);
+                const bDate = dayjs(b.date + 'T' + b.endTime);
+                return bDate.valueOf() - aDate.valueOf();
+              })
+              .map(event => {
+                console.log('Rendering live event:', event.title, 'isLive will be set to true');
+                return (
+                  <EventCard
+                    key={event._id || event.id}
+                    event={{ ...event, _id: event._id || event.id }}
+                    participantCount={participantCounts[event._id || event.id]}
+                    isRSVPd={true}
+                    isLive={true}
+                    onJoin={() => window.open(event.meetingLink, '_blank')}
+                  />
+                );
+              })}
           </div>
         )}
       </div>
@@ -114,14 +124,21 @@ function MyEvents() {
           <div className="text-center text-gray-400">No upcoming events found.</div>
         ) : (
           <div className="space-y-4">
-            {upcomingEvents.map(event => (
-              <EventCard
-                key={event._id || event.id}
-                event={{ ...event, _id: event._id || event.id }}
-                participantCount={participantCounts[event._id || event.id]}
-                isRSVPd={true}
-              />
-            ))}
+            {upcomingEvents
+              .slice()
+              .sort((a, b) => {
+                const aDate = dayjs(a.date + 'T' + a.startTime);
+                const bDate = dayjs(b.date + 'T' + b.startTime);
+                return aDate.valueOf() - bDate.valueOf(); // soonest first
+              })
+              .map(event => (
+                <EventCard
+                  key={event._id || event.id}
+                  event={{ ...event, _id: event._id || event.id }}
+                  participantCount={participantCounts[event._id || event.id]}
+                  isRSVPd={true}
+                />
+              ))}
           </div>
         )}
       </div>

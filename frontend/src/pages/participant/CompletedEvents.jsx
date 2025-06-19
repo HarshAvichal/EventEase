@@ -51,56 +51,64 @@ function CompletedEvents() {
         <div className="text-center text-gray-400">No completed events found.</div>
       ) : (
         <div className="space-y-4">
-          {completedEvents.map(event => (
-            <div key={event._id || event.id} className="flex flex-col bg-white rounded-lg shadow-md p-4 mb-4 relative">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-red-600 focus:outline-none"
-                title="Remove this event"
-                onClick={() => {
-                  setEventToDelete(event);
-                  setOpenConfirmDialog(true);
-                }}
-              >
-                <MdDelete size={22} />
-              </button>
-              <div className="text-xs text-gray-500 font-medium mb-2 flex items-center">
-                Organizer: {event.organizerId?.firstName
-                  ? `${event.organizerId.firstName} ${event.organizerId.lastName}`
-                  : event.organizerName || event.organizer || 'Unknown'}
-              </div>
-              <div className="flex items-center mb-2">
-                <img
-                  src={event.thumbnail}
-                  alt={event.title}
-                  className="w-40 h-28 object-cover rounded-md mr-6"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between flex-wrap">
-                    <span className="text-xl font-bold text-blue-800 truncate">
-                      {event.title}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-gray-600 mt-1 text-sm flex-wrap">
-                    <span className="mr-2 flex items-center"><FaRegCalendarAlt className="mr-1" /> {dayjs(event.date + 'T' + event.startTime).format('ddd, MMM D, YYYY')}</span>
-                    <span className="mr-2 flex items-center"><FaRegClock className="mr-1" /> {dayjs(event.date + 'T' + event.startTime).format('HH:mm')} - {dayjs(event.date + 'T' + event.endTime).format('HH:mm')}</span>
-                  </div>
-                </div>
+          {completedEvents
+            .slice() // copy array to avoid mutating state
+            .sort((a, b) => {
+              const aDate = dayjs(a.date + 'T' + a.endTime);
+              const bDate = dayjs(b.date + 'T' + b.endTime);
+              return bDate.valueOf() - aDate.valueOf(); // latest first
+            })
+            .map(event => (
+              <div key={event._id || event.id} className="flex flex-col bg-white rounded-lg shadow-md p-4 mb-4 relative">
                 <button
-                  className="ml-6 px-5 py-2 rounded font-semibold transition-colors duration-200 bg-green-600 text-white shadow-lg hover:bg-green-700 focus:ring-2 focus:ring-green-400 focus:outline-none"
-                  onClick={() => setFeedbackEvent(event)}
+                  className="absolute top-2 right-2 text-gray-400 hover:text-red-600 focus:outline-none"
+                  title="Remove this event"
+                  onClick={() => {
+                    setEventToDelete(event);
+                    setOpenConfirmDialog(true);
+                  }}
                 >
-                  Give Feedback
+                  <MdDelete size={22} />
                 </button>
+                <div className="text-xs text-gray-500 font-medium mb-2 flex items-center">
+                  Organizer: {event.organizerId?.firstName
+                    ? `${event.organizerId.firstName} ${event.organizerId.lastName}`
+                    : event.organizerName || event.organizer || 'Unknown'}
+                </div>
+                <div className="flex items-center mb-2">
+                  <img
+                    src={event.thumbnail}
+                    alt={event.title}
+                    className="w-40 h-28 object-cover rounded-md mr-6"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between flex-wrap">
+                      <span className="text-xl font-bold text-blue-800 truncate">
+                        {event.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-gray-600 mt-1 text-sm flex-wrap">
+                      <span className="mr-2 flex items-center"><FaRegCalendarAlt className="mr-1" /> {dayjs(event.date + 'T' + event.startTime).format('ddd, MMM D, YYYY')}</span>
+                      <span className="mr-2 flex items-center"><FaRegClock className="mr-1" /> {dayjs(event.date + 'T' + event.startTime).format('HH:mm')} - {dayjs(event.date + 'T' + event.endTime).format('HH:mm')}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="ml-6 px-5 py-2 rounded font-semibold transition-colors duration-200 bg-green-600 text-white shadow-lg hover:bg-green-700 focus:ring-2 focus:ring-green-400 focus:outline-none"
+                    onClick={() => setFeedbackEvent(event)}
+                  >
+                    Give Feedback
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
+      {console.log('[CompletedEvents] user:', user, 'user._id:', user?._id)}
       <FeedbackModal
         open={!!feedbackEvent}
         onClose={() => setFeedbackEvent(null)}
         event={feedbackEvent}
-        participantId={user?._id}
+        participantId={user?.id}
         authAxios={authAxios}
       />
       <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>

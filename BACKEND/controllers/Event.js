@@ -2,7 +2,7 @@ import Event from '../models/Event.js';
 import RSVP from '../models/Rsvp.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
-import { sendEmail } from '../utils/emailSender.js';
+import { sendEmail, getBrandedEmailTemplate } from '../utils/emailSender.js';
 import { deleteCloudinaryImage } from '../utils/cloudinary.js';
 
 // Create Event
@@ -76,10 +76,11 @@ export const createEvent = async (req, res, next) => {
             return res.status(400).json({ message: "Meeting link must be a valid Jitsi link." });
         }
 
-        // Check for conflicting events
+        // Check for conflicting events (ignore canceled events)
         const conflict = await Event.findOne({
             organizerId: req.user.id,
             date,
+            status: { $ne: "canceled" }, // Ignore canceled events
             $or: [
                 { startTime: { $lt: normalizedEndTime, $gte: normalizedStartTime } },
                 { endTime: { $gt: normalizedStartTime, $lte: normalizedEndTime } },
@@ -212,7 +213,7 @@ export const getOrganizerCompletedEvents = async (req, res, next) => {
         console.log('  Query:', JSON.stringify(query, null, 2));
 
         const totalItems = await Event.countDocuments(query);
-        const events = await Event.find(query, "title date startTime endTime meetingLink status thumbnail description")
+        const events = await Event.find(query, "title date startTime endTime meetingLink status thumbnail description rsvpList")
             .sort({ date: -1, endTime: -1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit));
@@ -222,11 +223,13 @@ export const getOrganizerCompletedEvents = async (req, res, next) => {
             console.log(`  Event: ${event.title} | date: ${event.date} | startTime: ${event.startTime} | endTime: ${event.endTime}`);
         });
 
-        // Append computedStatus to each event for frontend use if needed
-        const eventsWithComputedStatus = events.map(event => ({
-            ...event.toObject(),
-            computedStatus: event.computedStatus // Access the virtual here
-        }));
+        // Append computedStatus and attendedCount to each event for frontend use if needed
+        const eventsWithComputedStatus = events.map(event => {
+            const obj = event.toObject();
+            obj.computedStatus = event.computedStatus; // Access the virtual here
+            obj.attendedCount = (event.rsvpList || []).filter(rsvp => rsvp.status === 'active').length;
+            return obj;
+        });
 
         res.status(200).json({
             metadata: {
@@ -381,10 +384,9 @@ export const getParticipantMyEvents = async (req, res, next) => {
             if (event) {
                 // Skip canceled events
                 if (event.status === 'canceled') return;
-                const eventStartDateTime = new Date(`${event.date}T${event.startTime}:00Z`);
-                const eventEndDateTime = new Date(`${event.date}T${event.endTime}:00Z`);
-
-                if (currentDateTime < eventStartDateTime) {
+                // Use computedStatus for filtering
+                const status = event.computedStatus || event.status;
+                if (status === 'upcoming') {
                     if (!normalizedType || event.type === normalizedType) {
                         myUpcomingEvents.push({
                             id: event._id,
@@ -393,13 +395,13 @@ export const getParticipantMyEvents = async (req, res, next) => {
                             startTime: event.startTime,
                             endTime: event.endTime,
                             type: event.type,
-                            status: "upcoming",
+                            status: 'upcoming',
                             organizerId: event.organizerId,
                             thumbnail: event.thumbnail,
                             meetingLink: event.meetingLink,
                         });
                     }
-                } else if (currentDateTime >= eventStartDateTime && currentDateTime <= eventEndDateTime) {
+                } else if (status === 'live') {
                     myLiveEvents.push({
                         id: event._id,
                         title: event.title,
@@ -407,12 +409,12 @@ export const getParticipantMyEvents = async (req, res, next) => {
                         startTime: event.startTime,
                         endTime: event.endTime,
                         type: event.type,
-                        status: "live",
+                        status: 'live',
                         organizerId: event.organizerId,
                         thumbnail: event.thumbnail,
                         meetingLink: event.meetingLink,
                     });
-                } else if (currentDateTime > eventEndDateTime) {
+                } else if (status === 'completed') {
                     if (!normalizedType || event.type === normalizedType) {
                         myCompletedEvents.push({
                             id: event._id,
@@ -421,7 +423,7 @@ export const getParticipantMyEvents = async (req, res, next) => {
                             startTime: event.startTime,
                             endTime: event.endTime,
                             type: event.type,
-                            status: "completed",
+                            status: 'completed',
                             organizerId: event.organizerId,
                             thumbnail: event.thumbnail,
                             meetingLink: event.meetingLink,
@@ -543,11 +545,12 @@ export const deleteEvent = async (req, res, next) => {
                         sendEmail(
                             participant.email,
                             `Event Cancellation: ${event.title}`,
-                            `<p>Dear ${participant.firstName},</p>
-                             <p>We regret to inform you that the event <strong>${event.title}</strong>, scheduled for 
-                             <strong>${event.date}</strong> from <strong>${event.startTime}</strong> to <strong>${event.endTime}</strong>, 
-                             has been canceled by the organizer.</p>
-                             <p>We apologize for the inconvenience caused.</p>`
+                            getBrandedEmailTemplate(
+                              `Event Canceled: ${event.title}`,
+                              `<p style='color:#333;'>Dear <b>${participant.firstName}</b>,</p>
+                               <p style='color:#333;'>We regret to inform you that the event <strong>${event.title}</strong>, scheduled for <strong>${event.date}</strong> from <strong>${event.startTime}</strong> to <strong>${event.endTime}</strong>, has been canceled by the organizer.</p>
+                               <p style='color:#888;'>We apologize for the inconvenience caused.</p>`
+                            )
                         );
                     }, 0);
                 }
@@ -642,7 +645,13 @@ export const updateEvent = async (req, res, next) => {
                     sendEmail(
                         rsvp.participantId.email,
                         `Event Updated: ${event.title}`,
-                        `<p>Dear ${rsvp.participantId.firstName},</p><p>The event <strong>${event.title}</strong> you registered for has been updated.</p><p><strong>New Schedule:</strong><br>Date: ${date || oldDate}<br>Time: ${(startTime || oldStartTime)} - ${(endTime || oldEndTime)}</p><p>Please check the event details for more information.</p>`
+                        getBrandedEmailTemplate(
+                          `Event Updated: ${event.title}`,
+                          `<p style='color:#333;'>Dear <b>${rsvp.participantId.firstName}</b>,</p>
+                           <p style='color:#333;'>The event <strong>${event.title}</strong> you registered for has been updated.</p>
+                           <p style='color:#333;'><strong>New Schedule:</strong><br>Date: ${date || oldDate}<br>Time: ${(startTime || oldStartTime)} - ${(endTime || oldEndTime)}</p>
+                           <p style='color:#888;'>Please check the event details for more information.</p>`
+                        )
                     );
                 }
             }
@@ -701,7 +710,12 @@ export const cancelEvent = async (req, res, next) => {
                 sendEmail(
                     rsvp.participantId.email,
                     `Event Canceled: ${event.title}`,
-                    `<p>Dear ${rsvp.participantId.firstName},</p><p>The event <strong>${event.title}</strong> scheduled for <strong>${event.date}</strong> from <strong>${event.startTime}</strong> to <strong>${event.endTime}</strong> has been canceled by the organizer.</p><p>We apologize for the inconvenience.</p>`
+                    getBrandedEmailTemplate(
+                      `Event Canceled: ${event.title}`,
+                      `<p style='color:#333;'>Dear <b>${rsvp.participantId.firstName}</b>,</p>
+                       <p style='color:#333;'>The event <strong>${event.title}</strong> scheduled for <strong>${event.date}</strong> from <strong>${event.startTime}</strong> to <strong>${event.endTime}</strong> has been canceled by the organizer.</p>
+                       <p style='color:#888;'>We apologize for the inconvenience.</p>`
+                    )
                 );
             }
         }

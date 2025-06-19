@@ -13,6 +13,7 @@ function ParticipantDashboard() {
     const fetchLiveEvents = async () => {
       try {
         const res = await authAxios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/participant/my-events`);
+        console.log('Sidebar my-events API:', res.data.myEvents);
         setHasLiveEvents((res.data.myEvents?.live?.length || 0) > 0);
       } catch {
         setHasLiveEvents(false);
@@ -46,26 +47,9 @@ function ParticipantDashboard() {
               <Link to="my-events" replace={true} className="flex p-2 rounded-md text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 transition-colors duration-200 items-center" onClick={toggleSidebar}>
                 My Events
                 {hasLiveEvents && (
-                  <>
-                    <style>{`
-                      @keyframes sidebarRadiate {
-                        0% { box-shadow: 0 0 0 0 rgba(239,68,68, 0.7); }
-                        70% { box-shadow: 0 0 0 8px rgba(239,68,68, 0); }
-                        100% { box-shadow: 0 0 0 0 rgba(239,68,68, 0); }
-                      }
-                    `}</style>
-                    <span className="ml-2 relative flex h-3 w-3">
-                      <span style={{
-                        animation: 'sidebarRadiate 1s infinite',
-                        background: '#ef4444',
-                        borderRadius: '9999px',
-                        width: '12px',
-                        height: '12px',
-                        display: 'inline-block',
-                        boxShadow: '0 0 0 0 rgba(239,68,68, 0.7)',
-                      }}></span>
-                    </span>
-                  </>
+                  <span className="ml-2 flex items-center align-middle">
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                  </span>
                 )}
               </Link>
             </li>

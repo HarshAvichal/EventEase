@@ -15,7 +15,7 @@ const style = {
   outline: 'none',
 };
 
-const FeedbackModal = ({ open, onClose, event, participantId, authAxios }) => {
+const FeedbackModal = ({ open, onClose, event, participantId, authAxios, attendedCount }) => {
   const [tab, setTab] = useState(0); // 0: Give Feedback, 1: View Feedback
   const [feedbackList, setFeedbackList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,6 +49,14 @@ const FeedbackModal = ({ open, onClose, event, participantId, authAxios }) => {
       .finally(() => setLoading(false));
   }, [event, open, participantId, authAxios]);
 
+  // Always reset to 'Give Feedback' tab when modal opens for participant
+  useEffect(() => {
+    console.log('[FeedbackModal] useEffect: open =', open, 'isOrganizerView =', isOrganizerView);
+    if (open && !isOrganizerView) {
+      setTab(0);
+    }
+  }, [open, isOrganizerView]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -77,7 +85,9 @@ const FeedbackModal = ({ open, onClose, event, participantId, authAxios }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <FaUsers style={{ color: '#1976d2', marginRight: 8 }} />
             <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-              {event?.registrationCount || 0} Attended
+              {event?.computedStatus === 'completed' && typeof attendedCount === 'number'
+                ? attendedCount
+                : event?.registrationCount || 0} Attended
             </Typography>
           </Box>
         )}

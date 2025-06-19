@@ -2,7 +2,7 @@ import cron from "node-cron";
 import Event from "../models/Event.js";
 import RSVP from "../models/Rsvp.js";
 import User from "../models/User.js";
-import { sendEmail } from "./emailSender.js";
+import { sendEmail, getBrandedEmailTemplate } from "./emailSender.js";
 
 // All event times are assumed to be stored in UTC (date, startTime, endTime)
 // All comparisons and scheduling are done in UTC
@@ -47,16 +47,21 @@ export const scheduleReminders = () => {
                         try {
                             await sendEmail(
                                 participant.email,
-                                `Reminder: Upcoming Event \"${event.title}\"`,
-                                `<p>Dear ${participant.firstName},</p>
-                                 <p>This is a reminder for the upcoming event <strong>${event.title}</strong>.</p>
-                                 <p><strong>Event Details:</strong></p>
-                                 <ul>
-                                     <li>Date: ${event.date}</li>
-                                     <li>Time: ${event.startTime} - ${event.endTime} (UTC)</li>
-                                 </ul>
-                                 <p>Join using the meeting link: <a href="${event.meetingLink}">${event.meetingLink}</a></p>
-                                 <p>We look forward to seeing you there!</p>`
+                                `Reminder: Upcoming Event "${event.title}"`,
+                                getBrandedEmailTemplate(
+                                  `Event Reminder: ${event.title}`,
+                                  `<p style='color:#333;'>Dear <b>${participant.firstName}</b>,</p>
+                                   <p style='color:#333;'>This is a reminder for the upcoming event <strong>${event.title}</strong>.</p>
+                                   <p style='color:#333;'><strong>Event Details:</strong></p>
+                                   <ul style='color:#333;'>
+                                       <li>Date: ${event.date}</li>
+                                       <li>Time: ${event.startTime} - ${event.endTime} (UTC)</li>
+                                   </ul>
+                                   <div style='text-align:center;margin:24px 0;'>
+                                     <a href='${event.meetingLink}' style='background:#1a237e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;'>Join Event</a>
+                                   </div>
+                                   <p style='color:#888;'>We look forward to seeing you there!</p>`
+                                )
                             );
                             // Mark reminder as sent for this RSVP
                             rsvp.reminderSent = true;
@@ -90,10 +95,15 @@ export const scheduleReminders = () => {
                         await sendEmail(
                             organizer.email,
                             `Your Event is Now Live: ${event.title}`,
-                            `<p>Dear ${organizer.firstName},</p>
-                             <p>Your event <strong>${event.title}</strong> is now live!</p>
-                             <p>Meeting Link: <a href="${event.meetingLink}">${event.meetingLink}</a></p>
-                             <p>Best of luck with your event!</p>`
+                            getBrandedEmailTemplate(
+                              `Your Event is Now Live!`,
+                              `<p style='color:#333;'>Dear <b>${organizer.firstName}</b>,</p>
+                               <p style='color:#333;'>Your event <strong>${event.title}</strong> is now live!</p>
+                               <div style='text-align:center;margin:24px 0;'>
+                                 <a href='${event.meetingLink}' style='background:#1a237e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;'>Go to Meeting</a>
+                               </div>
+                               <p style='color:#888;'>Best of luck with your event!</p>`
+                            )
                         );
                         event.organizerLiveNotified = true;
                         await event.save();
@@ -112,10 +122,15 @@ export const scheduleReminders = () => {
                             await sendEmail(
                                 participant.email,
                                 `Event Now Live: ${event.title}`,
-                                `<p>Dear ${participant.firstName},</p>
-                                 <p>The event <strong>${event.title}</strong> is now live!</p>
-                                 <p>Join using the meeting link: <a href="${event.meetingLink}">${event.meetingLink}</a></p>
-                                 <p>We hope you enjoy the event!</p>`
+                                getBrandedEmailTemplate(
+                                  `Event Now Live: ${event.title}`,
+                                  `<p style='color:#333;'>Dear <b>${participant.firstName}</b>,</p>
+                                   <p style='color:#333;'>The event <strong>${event.title}</strong> is now live!</p>
+                                   <div style='text-align:center;margin:24px 0;'>
+                                     <a href='${event.meetingLink}' style='background:#1a237e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;'>Join Event</a>
+                                   </div>
+                                   <p style='color:#888;'>We hope you enjoy the event!</p>`
+                                )
                             );
                             break;
                         } catch (emailError) {

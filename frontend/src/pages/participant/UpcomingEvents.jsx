@@ -103,6 +103,12 @@ function UpcomingEvents() {
         <div className="text-gray-500 text-center">No upcoming events found.</div>
       ) : (
         events
+          .slice()
+          .sort((a, b) => {
+            const aDate = dayjs(a.date + 'T' + a.startTime);
+            const bDate = dayjs(b.date + 'T' + b.startTime);
+            return aDate.valueOf() - bDate.valueOf(); // earliest first
+          })
           // Remove events that are currently live
           .filter(event => {
             const now = dayjs();
