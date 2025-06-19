@@ -9,7 +9,7 @@ function ParticipantDashboard() {
   const location = useLocation();
 
   useEffect(() => {
-    // Fetch RSVP'd live events on mount and on route change
+    let intervalId;
     const fetchLiveEvents = async () => {
       try {
         const res = await authAxios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/participant/my-events`);
@@ -21,8 +21,9 @@ function ParticipantDashboard() {
     };
     if (user && user.role === 'participant') {
       fetchLiveEvents();
+      intervalId = setInterval(fetchLiveEvents, 20000); // 20 seconds
     }
-    // Optionally, re-fetch on every location change for real-time accuracy
+    return () => clearInterval(intervalId);
   }, [user, user?.role, location.pathname, authAxios]);
 
   if (!user || user.role !== 'participant') {
