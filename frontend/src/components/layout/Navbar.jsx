@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Menu, X } from 'lucide-react';
 
@@ -7,6 +7,9 @@ function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+
+  const onDashboard = location.pathname.startsWith('/dashboard');
 
   // Handler for logo click
   const handleLogoClick = (e) => {
@@ -53,13 +56,15 @@ function Navbar() {
         </Link>
         
         {/* Mobile hamburger */}
-        <button
-          className="md:hidden flex items-center justify-center p-2 rounded hover:bg-zinc-800 transition"
-          onClick={() => setMobileOpen((v) => !v)}
-          aria-label="Open menu"
-        >
-          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {!onDashboard && (
+          <button
+            className="md:hidden flex items-center justify-center p-2 rounded hover:bg-zinc-800 transition"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Open menu"
+          >
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        )}
         
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-2">
@@ -89,7 +94,7 @@ function Navbar() {
         </div>
       </div>
       {/* Mobile drawer */}
-      {mobileOpen && (
+      {mobileOpen && !onDashboard && (
         <div className="md:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setMobileOpen(false)}>
           <div
             className="absolute top-0 right-0 w-64 h-full bg-zinc-900 shadow-lg flex flex-col p-6 gap-2 animate-in slide-in-from-right-20"
