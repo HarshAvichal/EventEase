@@ -1,34 +1,21 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../../context/AuthContext'; // Adjust path as needed
-import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Button,
-  Box,
-  Grid,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  CircularProgress
-} from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import EventIcon from '@mui/icons-material/Event';
-import VideocamIcon from '@mui/icons-material/Videocam';
+import { useAuth } from '../../../context/AuthContext';
+import { Clock, Calendar, Video, Edit, Trash2, Loader2 } from 'lucide-react';
 import EventDetailModal from '../../../components/events/EventDetailModal';
-import { Link } from 'react-router-dom';
 import EditEventModal from '../../../components/events/EditEventModal';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import dayjs from 'dayjs';
-import { useEvents } from '../../../context/EventsContext';
+import { convertUTCToLocal } from '../../../utils/dateUtils';
 
 function UpcomingEvents() {
   const { user } = useAuth();
-  const { events, isLoading, error, refetchEvents } = useEvents();
+  const [events, setEvents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
@@ -36,224 +23,120 @@ function UpcomingEvents() {
   const [eventToEdit, setEventToEdit] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const handleCardClick = (eventId) => {
-    setSelectedEventId(eventId);
-  };
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          setError("Authentication token not found.");
+          setIsLoading(false);
+          return;
+        }
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/organizer/upcoming`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const upcomingEvents = (response.data.events || []).filter(event => event.computedStatus === 'upcoming');
+        setEvents(upcomingEvents);
+      } catch (err) {
+        const errorMessage = err.response?.data?.message || 'Failed to fetch upcoming events.';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleCloseModal = () => {
-    setSelectedEventId(null);
-  };
+    if (user && user.role === 'organizer') {
+      fetchUpcomingEvents();
+      const intervalId = setInterval(fetchUpcomingEvents, 60000);
+      return () => clearInterval(intervalId);
+    }
+  }, [user]);
 
+  const handleCardClick = (eventId) => setSelectedEventId(eventId);
+  const handleCloseModal = () => setSelectedEventId(null);
   const handleClickDelete = (eventId, eventTitle) => {
     setEventToDelete({ _id: eventId, title: eventTitle });
     setOpenConfirmDialog(true);
   };
-
-  const handleCloseConfirmDialog = () => {
-    setOpenConfirmDialog(false);
-    setEventToDelete(null);
-  };
+  const handleCloseConfirmDialog = () => setOpenConfirmDialog(false);
 
   const confirmDelete = async () => {
     if (!eventToDelete) return;
-    handleCloseConfirmDialog();
-
+    setDeleteLoading(true);
     try {
-      setDeleteLoading(true);
       const token = localStorage.getItem('accessToken');
       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/${eventToDelete._id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       toast.success(`Event "${eventToDelete.title}" deleted successfully!`);
-      await refetchEvents(); // Refresh the events list from context
+      setEvents(prevEvents => prevEvents.filter(event => event._id !== eventToDelete._id));
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to delete event.';
-      toast.error(errorMessage);
+      toast.error(err.response?.data?.message || 'Failed to delete event.');
     } finally {
       setDeleteLoading(false);
-      setEventToDelete(null);
+      handleCloseConfirmDialog();
     }
   };
 
-  // Edit modal handlers
   const handleEditClick = (event) => {
     setEventToEdit(event);
     setEditModalOpen(true);
   };
-
-  const handleEditModalClose = () => {
-    setEditModalOpen(false);
-    setEventToEdit(null);
+  const handleEditModalClose = () => setEditModalOpen(false);
+  const handleEventUpdate = () => {
+    setEvents([]); 
   };
 
-  const handleEventUpdate = async (updatedEvent) => {
-    await refetchEvents(); // Re-fetch all events after edit
-  };
-
-  // Filter events for upcoming using backend computedStatus
-  const upcomingEvents = events.filter(event => event.computedStatus === 'upcoming');
-
-  if (!user || user.role !== 'organizer') {
-    return <p className="text-red-500">Access Denied: You must be an organizer to view upcoming events.</p>;
-  }
-
-  if (isLoading) {
-    return <div className="text-center py-8"><span className="animate-spin inline-block w-8 h-8 border-4 border-indigo-500 border-solid rounded-full border-r-transparent"></span> Loading upcoming events...</div>;
-  }
-
-  if (error) {
-    return <p className="text-red-500 text-center py-8">Error: {error}</p>;
-  }
+  if (!user || user.role !== 'organizer') return <div className="text-center text-red-500 py-8">Access Denied</div>;
+  if (isLoading) return <div className="flex justify-center items-center h-48"><Loader2 className="w-6 h-6 animate-spin mr-2" /><span>Loading events...</span></div>;
+  if (error) return <div className="text-center text-red-500 py-8">Error: {error}</div>;
 
   return (
-    <Fragment>
-      <Box sx={{ p: 3, backgroundColor: 'white', borderRadius: '8px', boxShadow: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h5" component="h3" sx={{ fontWeight: 'bold', color: '#333' }}>
-            Your Upcoming Events
-          </Typography>
-        </Box>
-        {upcomingEvents.length === 0 ? (
-          <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            No upcoming events found. Start by creating a new event!
-          </Typography>
+    <>
+      <div className="p-6 bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800">
+        <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">Your Upcoming Events</h3>
+        {events.length === 0 ? (
+          <div className="text-center text-zinc-600 dark:text-zinc-400 py-8">No upcoming events found.</div>
         ) : (
-          <Grid container spacing={4}>
-            {upcomingEvents.map(event => (
-              <Grid item key={event._id} xs={12} sm={6} md={6}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: 6,
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'scale(1.02)' },
-                  }}
-                  onClick={() => handleCardClick(event._id)}
-                >
-                  {event.thumbnail ? (
-                    <CardMedia
-                      component="img"
-                      height="280"
-                      image={event.thumbnail}
-                      alt={event.title}
-                      sx={{ objectFit: 'contain', backgroundColor: '#f0f0f0' }}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        height: 280,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#e0e0e0',
-                        color: '#616161',
-                        fontSize: '1.2rem',
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        px: 2,
-                      }}
-                    >
-                      No Image Available
-                    </Box>
-                  )}
-                  <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                    <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: 'bold', color: '#1a237e', fontSize: '1.2rem', lineHeight: 1.3 }}>
-                      {event.title}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, color: '#555' }}>
-                      <EventIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                      <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-                        {dayjs(event.date).format('ddd, MMM D, YYYY')}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, color: '#555' }}>
-                      <AccessTimeIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                      <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-                        {event.startTime} - {event.endTime}
-                      </Typography>
-                    </Box>
-                    {event.meetingLink && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, color: '#555' }}>
-                        <VideocamIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                        <Typography variant="body2" component="a" href={event.meetingLink} target="_blank" rel="noopener noreferrer" sx={{ color: 'blue.600', textDecoration: 'none', fontSize: '0.9rem', '&:hover': { textDecoration: 'underline' } }}>
-                          Join Link
-                        </Typography>
-                      </Box>
-                    )}
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', fontSize: '0.85rem' }}>
-                      {event.description || 'No description provided.'}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditClick(event);
-                        }}
-                      >
-                        EDIT
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClickDelete(event._id, event.title);
-                        }}
-                      >
-                        DELETE
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {events.map(event => (
+              <Card key={event._id} className="h-full flex flex-col shadow-lg rounded-xl overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl border border-zinc-200 dark:border-zinc-700" onClick={() => handleCardClick(event._id)}>
+                <div className="h-56 overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+                  <img src={event.thumbnail || '/placeholder.png'} alt={event.title} className="w-full h-full object-cover"/>
+                </div>
+                <CardContent className="flex-grow p-4">
+                  <h4 className="text-xl font-bold text-indigo-700 dark:text-indigo-400 mb-3 line-clamp-2 leading-tight">{event.title}</h4>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm"><Calendar className="w-4 h-4 mr-2" /><span>{convertUTCToLocal(event.date, event.startTime).displayDate}</span></div>
+                    <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm"><Clock className="w-4 h-4 mr-2" /><span>{convertUTCToLocal(event.date, event.startTime).displayTime} - {convertUTCToLocal(event.date, event.endTime).displayTime}</span></div>
+                    {event.meetingLink && (<div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm"><Video className="w-4 h-4 mr-2" /><a href={event.meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>View Link</a></div>)}
+                  </div>
+                  <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4 line-clamp-3">{event.description || 'No description'}</p>
+                  <div className="flex justify-end gap-2 mt-auto">
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleEditClick(event); }}><Edit className="w-4 h-4 mr-1" />Edit</Button>
+                    <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); handleClickDelete(event._id, event.title); }}><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </Grid>
+          </div>
         )}
-      </Box>
-      {selectedEventId && (
-        <EventDetailModal
-          eventId={selectedEventId}
-          open={Boolean(selectedEventId)}
-          onClose={handleCloseModal}
-        />
-      )}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={handleCloseConfirmDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{"Confirm Deletion"}</DialogTitle>
+      </div>
+      {selectedEventId && <EventDetailModal eventId={selectedEventId} open={Boolean(selectedEventId)} onClose={handleCloseModal} />}
+      {editModalOpen && <EditEventModal event={eventToEdit} open={editModalOpen} onClose={handleEditModalClose} onEventUpdate={handleEventUpdate} />}
+      <Dialog open={openConfirmDialog} onOpenChange={setOpenConfirmDialog}>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {eventToDelete && `Are you sure you want to delete the event: "${eventToDelete.title}"? This action cannot be undone.`}
-          </DialogContentText>
+          <DialogHeader><DialogTitle>Confirm Deletion</DialogTitle><DialogDescription>{eventToDelete && `Are you sure you want to delete the event: "${eventToDelete.title}"?`}</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseConfirmDialog}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteLoading}>{deleteLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Delete'}</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={confirmDelete} color="error" autoFocus>
-            OK
-          </Button>
-        </DialogActions>
       </Dialog>
-      <EditEventModal
-        open={editModalOpen}
-        onClose={handleEditModalClose}
-        event={eventToEdit}
-        onUpdate={handleEventUpdate}
-      />
-    </Fragment>
+    </>
   );
 }
 

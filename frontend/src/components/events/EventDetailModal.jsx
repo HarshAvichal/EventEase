@@ -1,189 +1,145 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Box, Typography, IconButton, CircularProgress, Grid, CardMedia, Button, Chip } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import EventIcon from '@mui/icons-material/Event';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import VideocamIcon from '@mui/icons-material/Videocam';
-import { FaUsers } from 'react-icons/fa';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, X, Calendar, Clock, Video, Users, DollarSign, WifiOff, Link as LinkIcon } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import dayjs from 'dayjs';
+import { convertUTCToLocal } from '../../utils/dateUtils';
+import { useAuth } from '../../context/AuthContext';
 
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: { xs: '95%', md: 800 },
-  maxHeight: '90vh',
-  bgcolor: 'background.paper',
-  borderRadius: '8px',
-  boxShadow: 24,
-  p: 4,
-  outline: 'none',
-  overflowY: 'auto',
-};
-
-function EventDetailModal({ eventId, open, onClose }) {
+const EventDetailModal = ({ open, onClose, eventId }) => {
+  const { authAxios } = useAuth();
   const [eventDetails, setEventDetails] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
+  const [isLoading, setIsLoading] = useState(false);
+  
   useEffect(() => {
     const fetchEventDetails = async () => {
-      if (!eventId) {
-        setEventDetails(null);
-        setIsLoading(false);
-        return;
-      }
-
+      if (!eventId) return;
       setIsLoading(true);
-      setError(null);
       try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          throw new Error("Authentication token not found.");
-        }
-
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/details/${eventId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await authAxios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/details/${eventId}`);
         setEventDetails(response.data.event);
-      } catch (err) {
-        const errorMessage = err.response?.data?.message || 'Failed to fetch event details.';
-        setError(errorMessage);
-        toast.error(errorMessage);
+      } catch (error) {
+        toast.error('Failed to load event details');
+        console.error("Fetch event details error:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchEventDetails();
-  }, [eventId]);
+    if (open) {
+      fetchEventDetails();
+    }
+  }, [open, eventId, authAxios]);
+  
+  const handleClose = () => {
+    setEventDetails(null);
+    onClose();
+  };
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (!eventDetails) {
+      return (
+        <div className="flex flex-col justify-center items-center min-h-[400px] text-center p-6">
+          <WifiOff className="w-16 h-16 text-destructive mb-4" />
+          <h3 className="text-xl font-semibold">Failed to load event details</h3>
+          <p className="text-muted-foreground">Please check your connection and try again.</p>
+        </div>
+      );
+    }
+    
+    const { displayDate, displayTime: startTime } = convertUTCToLocal(eventDetails.date, eventDetails.startTime);
+    const { displayTime: endTime } = convertUTCToLocal(eventDetails.date, eventDetails.endTime);
+
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-primary">{eventDetails.title}</h2>
+          {eventDetails.computedStatus === 'live' && (
+            <Badge variant="destructive" className="text-base animate-pulse">LIVE</Badge>
+          )}
+        </div>
+        
+        <p className="text-muted-foreground mb-6 leading-relaxed">
+          {eventDetails.description || 'No description provided.'}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-6 text-base">
+          <div className="flex items-center gap-3"><Calendar className="w-5 h-5 text-primary" /><span>{displayDate}</span></div>
+          <div className="flex items-center gap-3"><Clock className="w-5 h-5 text-primary" /><span>{startTime} - {endTime}</span></div>
+          <div className="flex items-center gap-3"><Users className="w-5 h-5 text-primary" /><span>{eventDetails.registrationCount || 0} participants</span></div>
+          <div className="flex items-center gap-3"><DollarSign className="w-5 h-5 text-primary" /><span>{eventDetails.price ? `$${eventDetails.price}` : 'FREE'}</span></div>
+        </div>
+
+        {eventDetails.computedStatus === 'live' && eventDetails.meetingLink && (
+          <div className="my-6">
+            <Button asChild size="lg" className="w-full bg-red-600 hover:bg-red-700">
+              <a href={eventDetails.meetingLink} target="_blank" rel="noopener noreferrer">
+                <Video className="w-5 h-5 mr-2" />
+                Join Live Meeting
+              </a>
+            </Button>
+          </div>
+        )}
+
+        {eventDetails.rsvpList && eventDetails.rsvpList.length > 0 && (
+          <div className="pt-6 border-t">
+            <h3 className="text-xl font-bold mb-4">Participants</h3>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {eventDetails.rsvpList.map((rsvp, index) => (
+                <div key={index} className="bg-muted p-3 rounded-lg flex justify-between items-center text-sm">
+                  <span className="font-medium">{rsvp.participantName}</span>
+                  <span className="text-muted-foreground">{rsvp.email}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      aria-labelledby="event-detail-modal-title"
-      aria-describedby="event-detail-modal-description"
-    >
-      <Box sx={style}>
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <CloseIcon />
-        </IconButton>
-
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
-            <CircularProgress />
-          </Box>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="p-4 flex flex-row items-center justify-between sticky top-0 bg-background z-10 border-b">
+          <DialogTitle className="text-lg font-semibold">{eventDetails?.title || 'Event Details'}</DialogTitle>
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <X className="w-5 h-5" />
+            </Button>
+          </DialogClose>
+        </DialogHeader>
+        
+        {eventDetails?.thumbnail && (
+          <div className="w-full h-72 bg-muted">
+            <img
+              src={eventDetails.thumbnail}
+              alt={eventDetails.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
         )}
-
-        {error && (
-          <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
-            Error: {error}
-          </Typography>
-        )}
-
-        {eventDetails && !isLoading && (() => {
-          const now = dayjs();
-          const eventStart = dayjs(eventDetails.date + 'T' + eventDetails.startTime);
-          const eventEnd = dayjs(eventDetails.date + 'T' + eventDetails.endTime);
-          let status = 'upcoming';
-          if (now.isAfter(eventEnd)) status = 'completed';
-          else if (now.isAfter(eventStart) && now.isBefore(eventEnd)) status = 'live';
-          return (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                {eventDetails.thumbnail && (
-                  <CardMedia
-                    component="img"
-                    height="300"
-                    image={eventDetails.thumbnail}
-                    alt={eventDetails.title}
-                    sx={{ borderRadius: '8px', objectFit: 'cover' }}
-                  />
-                )}
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 'bold', color: '#1a237e' }}>
-                    {eventDetails.title}
-                  </Typography>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <CalendarTodayIcon sx={{ mr: 1, color: '#555' }} />
-                  <Typography variant="body1" color="text.secondary">
-                    {dayjs(eventDetails.date).format('dddd, MMMM D, YYYY')}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <AccessTimeIcon sx={{ mr: 1, color: '#555' }} />
-                  <Typography variant="body1" color="text.secondary">
-                    {dayjs(eventDetails.date + 'T' + eventDetails.startTime).format('HH:mm')} - {dayjs(eventDetails.date + 'T' + eventDetails.endTime).format('HH:mm')}
-                  </Typography>
-                </Box>
-                {/* Conditional rendering for meeting link based on computed status (now frontend computed) */}
-                {status === 'completed' ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <VideocamIcon sx={{ mr: 1, color: '#d32f2f' }} />
-                    <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#d32f2f' }}>
-                      Event has ended
-                    </Typography>
-                  </Box>
-                ) : (
-                  eventDetails.meetingLink && (
-                    <>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <VideocamIcon sx={{ mr: 1, color: '#555' }} />
-                        <Typography variant="body1" component="a" href={eventDetails.meetingLink} target="_blank" rel="noopener noreferrer" sx={{ color: 'blue.600', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
-                          Join Event
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, mb: 2 }}>
-                        <FaUsers style={{ color: '#555', fontSize: 32, marginRight: 12 }} />
-                        <Typography variant="h5" sx={{ fontWeight: 700, fontSize: 28, color: '#555' }}>
-                          {eventDetails.registrationCount || 0}
-                        </Typography>
-                      </Box>
-                    </>
-                  )
-                )}
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom sx={{ mt: 2, fontWeight: 'bold', color: '#333' }}>
-                  Details
-                </Typography>
-                <Typography variant="body1" color="text.primary" sx={{ lineHeight: 1.6 }}>
-                  {eventDetails.description || 'No description available.'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-                  <Button variant="contained" onClick={onClose} sx={{ mr: 1, bgcolor: '#1a237e', '&:hover': { bgcolor: '#3949ab' } }}>
-                      Close Preview
-                  </Button>
-                  {/* Add more action buttons here if needed, e.g., RSVP */}
-              </Grid>
-            </Grid>
-          );
-        })()}
-      </Box>
-    </Modal>
+        
+        {renderContent()}
+      </DialogContent>
+    </Dialog>
   );
-}
+};
 
 export default EventDetailModal; 

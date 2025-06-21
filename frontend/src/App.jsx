@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 
 // Layout Components
 import Navbar from './components/layout/Navbar';
@@ -36,7 +36,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col bg-background text-foreground">
           <Navbar />
           <main className="flex-grow">
             <Routes>
@@ -54,28 +54,21 @@ function App() {
               <Route element={<PrivateRoute allowedRoles={['organizer', 'participant']} />}>
                 {/* Organizer Dashboard and nested routes */}
                 <Route path="/dashboard/organizer" element={<OrganizerDashboard />}>
-                  {/* Add specific components for each organizer dashboard view */}
-                  <Route index element={<div>Select an option from the sidebar to manage your events.</div>} /> {/* Default content for /dashboard/organizer */}
+                  <Route index element={<div>Select an option from the sidebar to manage your events.</div>} />
                   <Route path="create-event" element={<CreateEvent />} />
                   <Route path="upcoming" element={<UpcomingEvents />} />
                   <Route path="completed" element={<CompletedEvents />} />
                   <Route path="upcoming/all" element={<AllUpcomingEvents />} />
                   <Route path="live" element={<LiveEvents />} />
                 </Route>
-                
-                {/* Participant Dashboard with sidebar and nested routes */}
                 <Route path="/dashboard/participant" element={<ParticipantDashboard />}>
                   <Route index element={<ParticipantUpcomingEvents />} />
                   <Route path="upcoming" element={<ParticipantUpcomingEvents />} />
                   <Route path="my-events" element={<ParticipantMyEvents />} />
                   <Route path="completed" element={<ParticipantCompletedEvents />} />
                 </Route>
-
-                {/* These might be direct links for organizers/participants or accessible globally if needed */}
                 <Route path="/profile" element={<Profile />} />
               </Route>
-              
-              {/* Catch-all for 404 or redirect to home */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>

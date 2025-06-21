@@ -100,6 +100,7 @@ export const signup = async (req, res, next) => {
         });
 
         res.status(201).json({
+            success: true,
             message: "User registered successfully.",
             accessToken,
             user: {
@@ -155,6 +156,7 @@ export const login = async (req, res, next) => {
         });
 
         res.status(200).json({
+            success: true,
             message: "Login successful",
             accessToken,
             refreshToken,

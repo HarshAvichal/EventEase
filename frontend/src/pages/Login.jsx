@@ -1,66 +1,82 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-
-// Material UI Imports
-import { TextField, Button, Box, Typography, Container, CircularProgress } from '@mui/material';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters long';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) {
+    
+    // Validation
+    const newErrors = {};
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/login`, {
-        email: formData.email,
-        password: formData.password,
-      });
-
-      const { accessToken, refreshToken, user } = response.data;
-      login(user, accessToken, refreshToken); // Use the login function from AuthContext
-
-      toast.success('Login successful!');
-      if (user.role === 'organizer') {
-        navigate('/dashboard/organizer');
-      } else if (user.role === 'participant') {
-        navigate('/dashboard/participant');
-      } else {
-        navigate('/dashboard'); // Fallback
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/login`, formData);
+      
+      if (response.data.success) {
+        const { accessToken, refreshToken, user } = response.data;
+        login(user, accessToken, refreshToken);
+        
+        toast.success('Login successful!');
+        
+        // Redirect based on user role or intended destination
+        const from = location.state?.from?.pathname;
+        if (from) {
+          navigate(from);
+        } else if (user.role === 'organizer') {
+          navigate('/dashboard/organizer');
+        } else if (user.role === 'participant') {
+          navigate('/dashboard/participant');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
@@ -70,73 +86,113 @@ function Login() {
     }
   };
 
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, mb: 8 }}>
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        p: 4,
-        bgcolor: 'background.paper',
-        borderRadius: 2,
-        boxShadow: 3,
-      }}>
-        <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
-          Login to your account
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Or {' '}
-          <Link to="/signup" style={{ textDecoration: 'none' }}>
-            <Button variant="text" sx={{ textTransform: 'none', p: 0 }}>create a new account</Button>
-          </Link>
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Email address"
+    <div className="max-w-md mx-auto py-24 px-4">
+      <Card className="shadow-lg border border-zinc-200 dark:border-zinc-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            Welcome Back
+          </CardTitle>
+          <p className="text-zinc-600 dark:text-zinc-400 mt-2">
+            Sign in to your account to continue
+          </p>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Email Address *
+              </Label>
+              <Input
+                id="email"
                 name="email"
-                autoComplete="email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
-            error={!!errors.email}
-            helperText={errors.email}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-                name="password"
-            label="Password"
-                type="password"
-            id="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
-            error={!!errors.password}
-            helperText={errors.password}
-            sx={{ mb: 2 }}
+                placeholder="Enter your email"
+                className={errors.email ? "border-red-500" : ""}
+                required
+                autoFocus
               />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', width: '100%', mb: 2 }}>
-            <Link to="/forgot-password" style={{ textDecoration: 'none' }}>
-              <Button variant="text" sx={{ textTransform: 'none' }}>Forgot your password?</Button>
-              </Link>
-          </Box>
-          <Button
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Password *
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  className={`pr-10 ${errors.password ? "border-red-500" : ""}`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleClickShowPassword}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                >
+                  {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password}</p>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <Button
               type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-            disabled={isLoading}
-          >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
-          </Button>
-        </Box>
-      </Box>
-    </Container>
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-lg font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Logging In...
+                </>
+              ) : (
+                'Login'
+              )}
+            </Button>
+
+            {/* Links */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-sm">
+              <p className="text-zinc-600 dark:text-zinc-400">
+                Don't have an account?{' '}
+                <Link 
+                  to="/signup" 
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                >
+                  Sign up
+                </Link>
+              </p>
+              
+              <Link 
+                to="/forgot-password" 
+                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

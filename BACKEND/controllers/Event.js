@@ -4,6 +4,11 @@ import User from '../models/User.js';
 import mongoose from 'mongoose';
 import { sendEmail, getBrandedEmailTemplate } from '../utils/emailSender.js';
 import { deleteCloudinaryImage } from '../utils/cloudinary.js';
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // Create Event
 export const createEvent = async (req, res, next) => {
@@ -49,22 +54,27 @@ export const createEvent = async (req, res, next) => {
             return res.status(400).json({ message: "End time must be after start time." });
         }
 
-        // Get current local time
-        const currentDateTime = new Date(); // Local time
-        // Construct event start and end datetime in local time
-        const eventStartDateTime = new Date(`${date}T${normalizedStartTime}`);
-        const eventEndDateTime = new Date(`${date}T${normalizedEndTime}`);
-        // Debug logs for troubleshooting local time issues
-        console.log('DEBUG - Event Creation:');
-        console.log('  Server now:', currentDateTime.toString(), '| ISO:', currentDateTime.toISOString());
+        // Convert local date/time to UTC for proper validation
+        // Create a local datetime string and convert to UTC
+        const localDateTimeString = `${date}T${normalizedStartTime}:00`;
+        const eventStartDateTime = new Date(localDateTimeString);
+        const eventEndDateTime = new Date(`${date}T${normalizedEndTime}:00`);
+        
+        // Get current UTC time
+        const currentDateTime = new Date();
+        
+        // Debug logs for troubleshooting UTC time issues
+        console.log('DEBUG - Event Creation (UTC):');
+        console.log('  Server now (UTC):', currentDateTime.toISOString());
         console.log('  Received date:', date);
         console.log('  Received startTime:', normalizedStartTime);
         console.log('  Received endTime:', normalizedEndTime);
-        console.log('  eventStartDateTime:', eventStartDateTime.toString(), '| ISO:', eventStartDateTime.toISOString());
-        console.log('  eventEndDateTime:', eventEndDateTime.toString(), '| ISO:', eventEndDateTime.toISOString());
-        // Check if the event is in the past (using local time comparison)
-        if (eventStartDateTime < currentDateTime) {
-            return res.status(400).json({ message: "Cannot create an event in the past." });
+        console.log('  eventStartDateTime (UTC):', eventStartDateTime.toISOString());
+        console.log('  eventEndDateTime (UTC):', eventEndDateTime.toISOString());
+        
+        // Check if the event is in the past (using UTC comparison)
+        if (eventStartDateTime <= currentDateTime) {
+            return res.status(400).json({ message: "Event can't be in the past" });
         }
 
         // Generate or validate meeting link
@@ -125,17 +135,15 @@ export const createEvent = async (req, res, next) => {
 export const getOrganizerUpcomingEvents = async (req, res, next) => {
     try {
         const now = new Date();
-        // Use local date instead of UTC date
-        const todayDate = now.getFullYear() + '-' +
-          String(now.getMonth() + 1).padStart(2, '0') + '-' +
-          String(now.getDate()).padStart(2, '0');
-        const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+        // Use UTC date and time for consistent timezone handling
+        const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+        const currentTime = now.toISOString().split('T')[1].substring(0, 5); // HH:MM in UTC
 
         // Debug logs for server time and query
-        console.log('DEBUG - getOrganizerUpcomingEvents:');
-        console.log('  Server now:', now.toString(), '| ISO:', now.toISOString());
-        console.log('  todayDate:', todayDate);
-        console.log('  currentTime:', currentTime);
+        console.log('DEBUG - getOrganizerUpcomingEvents (UTC):');
+        console.log('  Server now (UTC):', now.toISOString());
+        console.log('  todayDate (UTC):', todayDate);
+        console.log('  currentTime (UTC):', currentTime);
 
         const { page = 1, limit = 10 } = req.query;
 
@@ -186,17 +194,15 @@ export const getOrganizerUpcomingEvents = async (req, res, next) => {
 export const getOrganizerCompletedEvents = async (req, res, next) => {
     try {
         const now = new Date();
-        // Use local date instead of UTC date
-        const todayDate = now.getFullYear() + '-' +
-          String(now.getMonth() + 1).padStart(2, '0') + '-' +
-          String(now.getDate()).padStart(2, '0');
-        const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+        // Use UTC date and time for consistent timezone handling
+        const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+        const currentTime = now.toISOString().split('T')[1].substring(0, 5); // HH:MM in UTC
 
         // Debug logs for server time and query
-        console.log('DEBUG - getOrganizerCompletedEvents:');
-        console.log('  Server now:', now.toString(), '| ISO:', now.toISOString());
-        console.log('  todayDate:', todayDate);
-        console.log('  currentTime:', currentTime);
+        console.log('DEBUG - getOrganizerCompletedEvents (UTC):');
+        console.log('  Server now (UTC):', now.toISOString());
+        console.log('  todayDate (UTC):', todayDate);
+        console.log('  currentTime (UTC):', currentTime);
 
         const { page = 1, limit = 10 } = req.query;
 
@@ -250,11 +256,9 @@ export const getOrganizerCompletedEvents = async (req, res, next) => {
 export const getParticipantUpcomingEvents = async (req, res, next) => {
     try {
         const now = new Date();
-        // Use local date instead of UTC date
-        const todayDate = now.getFullYear() + '-' +
-          String(now.getMonth() + 1).padStart(2, '0') + '-' +
-          String(now.getDate()).padStart(2, '0');
-        const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+        // Use UTC date and time for consistent timezone handling
+        const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+        const currentTime = now.toISOString().split('T')[1].substring(0, 5); // HH:MM in UTC
 
         const { type, page = 1, limit = 10 } = req.query; // Extract query parameters with defaults
 
@@ -270,9 +274,9 @@ export const getParticipantUpcomingEvents = async (req, res, next) => {
                 },
             ],
         };
-        console.log('DEBUG - Server now:', new Date().toString());
-        console.log('DEBUG - getParticipantUpcomingEvents Query:', JSON.stringify(query, null, 2));
-        console.log('DEBUG - currentTime:', currentTime, 'todayDate:', todayDate);
+        console.log('DEBUG - Server now (UTC):', now.toISOString());
+        console.log('DEBUG - getParticipantUpcomingEvents Query (UTC):', JSON.stringify(query, null, 2));
+        console.log('DEBUG - currentTime (UTC):', currentTime, 'todayDate (UTC):', todayDate);
 
         const events = await Event.find(query, "title date startTime endTime type status thumbnail description organizerId")
             .populate('organizerId', 'firstName lastName')
@@ -296,8 +300,8 @@ export const getParticipantUpcomingEvents = async (req, res, next) => {
 
         res.status(200).json({
             metadata: {
-                totalItems: events.length,
-                totalPages: Math.ceil(events.length / limit),
+                totalItems: eventsWithComputedStatus.length,
+                totalPages: Math.ceil(eventsWithComputedStatus.length / limit),
                 currentPage: parseInt(page),
                 itemsPerPage: parseInt(limit),
             },
@@ -312,40 +316,34 @@ export const getParticipantUpcomingEvents = async (req, res, next) => {
 export const getParticipantCompletedEvents = async (req, res, next) => {
     try {
         const now = new Date();
-        const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-        const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+        const todayDate = now.toISOString().split('T')[0];
+        const currentTime = now.toISOString().split('T')[1].substring(0, 5);
 
-        const { type, page = 1, limit = 10 } = req.query; // Extract query parameters with defaults
+        const rsvps = await RSVP.find({ participantId: req.user.id }).select('eventId');
+        const eventIds = rsvps.map(rsvp => rsvp.eventId);
 
-        // Normalize the type filter (case-insensitive)
-        const normalizedType = type ? type.toLowerCase() : null;
-
-        const query = {
+        const completedEvents = await Event.find({
+            _id: { $in: eventIds },
             $or: [
-                { date: { $lt: todayDate } }, // Past dates
-                {
-                    date: todayDate, // Today
-                    endTime: { $lte: currentTime },
-                },
+                { date: { $lt: todayDate } },
+                { date: todayDate, endTime: { $lte: currentTime } },
             ],
-        };
+        }).select('_id');
+        
+        const completedEventIds = completedEvents.map(event => event._id);
 
-        // Apply type filter if provided
-        if (normalizedType) {
-            query.type = normalizedType;
-        }
+        const { page = 1, limit = 10 } = req.query;
 
-        const totalItems = await Event.countDocuments(query); // Total number of matching events
-        const events = await Event.find(query, "title date startTime endTime type status thumbnail description") // Project minimal fields
-            .sort({ date: -1, endTime: -1 }) // Sort by date and endTime
-            .skip((page - 1) * limit) // Skip documents for pagination
-            .limit(parseInt(limit)); // Limit the number of documents
-
-        // Append computedStatus to each event for frontend use if needed
-        const eventsWithComputedStatus = events.map(event => ({
-            ...event.toObject(),
-            computedStatus: event.computedStatus // Access the virtual here
-        }));
+        const events = await Event.find({ _id: { $in: completedEventIds } })
+            .populate('organizerId', 'firstName lastName')
+            .sort({ date: -1, endTime: -1 })
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit));
+            
+        const totalItems = await RSVP.countDocuments({
+            participantId: req.user.id,
+            eventId: { $in: completedEventIds }
+        });
 
         res.status(200).json({
             metadata: {
@@ -354,10 +352,10 @@ export const getParticipantCompletedEvents = async (req, res, next) => {
                 currentPage: parseInt(page),
                 itemsPerPage: parseInt(limit),
             },
-            events: eventsWithComputedStatus,
+            events,
         });
     } catch (error) {
-        next(error); // Pass error to centralized error handler
+        next(error);
     }
 };
 
@@ -591,75 +589,63 @@ export const searchEvents = async (req, res, next) => {
 // Update Event
 export const updateEvent = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        const { title, description, date, startTime, endTime, meetingLink, thumbnail } = req.body;
+        const eventId = req.params.id;
+        const updates = req.body;
+        const userId = req.user.id;
 
-        // Find the event
-        const event = await Event.findById(id).populate('rsvpList.participantId', 'email firstName lastName');
+        const event = await Event.findById(eventId);
+
         if (!event) {
             return res.status(404).json({ message: "Event not found." });
         }
 
-        // Check if user is the organizer
-        if (event.organizerId.toString() !== req.user.id) {
+        if (event.organizerId.toString() !== userId) {
             return res.status(403).json({ message: "You are not authorized to update this event." });
         }
 
-        // Store old date/time for comparison
-        const oldDate = event.date;
-        const oldStartTime = event.startTime;
-        const oldEndTime = event.endTime;
+        // Keep track of what changed for notification purposes
+        const changes = {};
+        if (updates.date && updates.date !== event.date) changes.date = updates.date;
+        if (updates.startTime && updates.startTime !== event.startTime) changes.startTime = updates.startTime;
+        if (updates.endTime && updates.endTime !== event.endTime) changes.endTime = updates.endTime;
 
-        // If there's a new thumbnail file, delete the old one
-        if (req.file && event.thumbnail) {
-            const publicId = event.thumbnail.split('/').slice(-1)[0].split('.')[0];
-            await deleteCloudinaryImage(publicId);
-        }
+        // Find all RSVPs for this event
+        const rsvps = await RSVP.find({ eventId });
+        const participantIds = rsvps.map(r => r.participantId);
+        const participants = await User.find({ '_id': { $in: participantIds } });
 
-        // Update event fields
-        const updateData = {
-            ...(title && { title }),
-            ...(description && { description }),
-            ...(date && { date }),
-            ...(startTime && { startTime }),
-            ...(endTime && { endTime }),
-            ...(meetingLink && { meetingLink }),
-            ...(req.file && { thumbnail: req.file.path }),
-            ...(thumbnail && { thumbnail }), // Accept thumbnail URL from body
-        };
+        // Update the event with the new details
+        Object.assign(event, updates);
+        await event.save();
+        
+        // Notify all registered participants about the update
+        if (Object.keys(changes).length > 0) {
+            const userTimezone = 'America/New_York';
+            const formattedDate = dayjs.utc(event.date).tz(userTimezone).format("MMMM D, YYYY");
+            const formattedStartTime = dayjs.utc(`${event.date}T${event.startTime}Z`).tz(userTimezone).format("h:mm A");
+            const formattedEndTime = dayjs.utc(`${event.date}T${event.endTime}Z`).tz(userTimezone).format("h:mm A");
 
-        const updatedEvent = await Event.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true, runValidators: true }
-        ).populate('rsvpList.participantId', 'email firstName lastName');
-
-        // Notify participants if date or time changed
-        if (
-            (date && date !== oldDate) ||
-            (startTime && startTime !== oldStartTime) ||
-            (endTime && endTime !== oldEndTime)
-        ) {
-            for (const rsvp of event.rsvpList) {
-                if (rsvp.status === 'active' && rsvp.participantId?.email) {
-                    sendEmail(
-                        rsvp.participantId.email,
+            const emailPromises = participants.map(participant => {
+                return sendEmail(
+                    participant.email,
+                    `Event Updated: ${event.title}`,
+                    getBrandedEmailTemplate(
                         `Event Updated: ${event.title}`,
-                        getBrandedEmailTemplate(
-                          `Event Updated: ${event.title}`,
-                          `<p style='color:#333;'>Dear <b>${rsvp.participantId.firstName}</b>,</p>
-                           <p style='color:#333;'>The event <strong>${event.title}</strong> you registered for has been updated.</p>
-                           <p style='color:#333;'><strong>New Schedule:</strong><br>Date: ${date || oldDate}<br>Time: ${(startTime || oldStartTime)} - ${(endTime || oldEndTime)}</p>
-                           <p style='color:#888;'>Please check the event details for more information.</p>`
-                        )
-                    );
-                }
-            }
+                        `<p>Dear ${participant.firstName},</p>
+                         <p>The event <b>${event.title}</b> you registered for has been updated.</p>
+                         <p><b>New Schedule:</b></p>
+                         <p>Date: ${formattedDate}</p>
+                         <p>Time: ${formattedStartTime} - ${formattedEndTime} EST</p>
+                         <p>Please check the event details for more information.</p>`
+                    )
+                );
+            });
+            await Promise.all(emailPromises);
         }
 
         res.status(200).json({
             message: "Event updated successfully",
-            event: updatedEvent
+            event,
         });
     } catch (error) {
         next(error);
@@ -687,40 +673,47 @@ export const getOrganizerAllEvents = async (req, res, next) => {
 
 export const cancelEvent = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        // Validate Event ID
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid event ID." });
-        }
-        // Fetch the Event
-        const event = await Event.findById(id).populate('rsvpList.participantId', 'email firstName lastName');
+        const event = await Event.findById(req.params.id);
+
         if (!event) {
-            return res.status(404).json({ message: "Event not found." });
+            return res.status(404).json({ message: "Event not found" });
         }
-        // Only organizer can cancel
+
+        // Only the organizer can cancel the event
         if (event.organizerId.toString() !== req.user.id) {
-            return res.status(403).json({ message: "Only the organizer can cancel this event." });
+            return res.status(403).json({ message: "Not authorized to cancel this event" });
         }
-        // Set status to canceled
+
         event.status = 'canceled';
         await event.save();
-        // Notify all participants
-        for (const rsvp of event.rsvpList) {
-            if (rsvp.status === 'active' && rsvp.participantId?.email) {
-                sendEmail(
-                    rsvp.participantId.email,
-                    `Event Canceled: ${event.title}`,
-                    getBrandedEmailTemplate(
-                      `Event Canceled: ${event.title}`,
-                      `<p style='color:#333;'>Dear <b>${rsvp.participantId.firstName}</b>,</p>
-                       <p style='color:#333;'>The event <strong>${event.title}</strong> scheduled for <strong>${event.date}</strong> from <strong>${event.startTime}</strong> to <strong>${event.endTime}</strong> has been canceled by the organizer.</p>
-                       <p style='color:#888;'>We apologize for the inconvenience.</p>`
-                    )
-                );
-            }
+
+        // Notify all registered participants
+        const rsvps = await RSVP.find({ eventId: event._id, status: 'active' });
+        const participantIds = rsvps.map(rsvp => rsvp.participantId);
+        const participants = await User.find({ _id: { $in: participantIds } });
+
+        // Format date and time in EST for the email
+        const estDateTime = dayjs.utc(`${event.date}T${event.startTime}`).tz('America/New_York');
+        const estDate = estDateTime.format('MMMM D, YYYY');
+        const estTime = estDateTime.format('h:mm A z');
+
+        for (const participant of participants) {
+            await sendEmail(
+                participant.email,
+                `Event Canceled: ${event.title}`,
+                getBrandedEmailTemplate(
+                  `Event Canceled: ${event.title}`,
+                  `<p>Dear ${participant.firstName},</p>
+                   <p>We're writing to inform you that the event "<strong>${event.title}</strong>" scheduled for <strong>${estDate} at ${estTime}</strong> has been canceled by the organizer.</p>
+                   <p>We apologize for any inconvenience this may cause.</p>`
+                )
+            );
         }
-        res.status(200).json({ message: 'Event canceled successfully.', event });
+
+        res.status(200).json({ message: "Event canceled successfully" });
     } catch (error) {
         next(error);
     }
 };
+
+

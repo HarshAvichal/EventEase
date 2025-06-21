@@ -1,30 +1,16 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthContext';
 import { useEvents } from '../../../context/EventsContext';
-import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Button,
-  Box,
-  Grid,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  CircularProgress
-} from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import EventIcon from '@mui/icons-material/Event';
-import VideocamIcon from '@mui/icons-material/Videocam';
+import { Clock, Calendar, Video, AlertTriangle, Loader2 } from 'lucide-react';
 import EventDetailModal from '../../../components/events/EventDetailModal';
 import EditEventModal from '../../../components/events/EditEventModal';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import dayjs from 'dayjs';
-import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import { convertUTCToLocal } from '../../../utils/dateUtils';
 
 function LiveEvents() {
   const { user } = useAuth();
@@ -39,22 +25,14 @@ function LiveEvents() {
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
   const [eventToCancel, setEventToCancel] = useState(null);
 
-  // Filter events for live using backend computedStatus
   const liveEvents = events.filter(event => event.computedStatus === 'live');
 
-  const handleCardClick = (eventId) => {
-    setSelectedEventId(eventId);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedEventId(null);
-  };
-
+  const handleCardClick = (eventId) => setSelectedEventId(eventId);
+  const handleCloseModal = () => setSelectedEventId(null);
   const handleClickDelete = (eventId, eventTitle) => {
     setEventToDelete({ _id: eventId, title: eventTitle });
     setOpenConfirmDialog(true);
   };
-
   const handleCloseConfirmDialog = () => {
     setOpenConfirmDialog(false);
     setEventToDelete(null);
@@ -67,42 +45,31 @@ function LiveEvents() {
       setDeleteLoading(true);
       const token = localStorage.getItem('accessToken');
       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/${eventToDelete._id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       toast.success(`Event "${eventToDelete.title}" deleted successfully!`);
-      await refetchEvents(); // Refresh the events list from context
+      await refetchEvents();
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to delete event.';
-      toast.error(errorMessage);
+      toast.error(err.response?.data?.message || 'Failed to delete event.');
     } finally {
       setDeleteLoading(false);
       setEventToDelete(null);
     }
   };
 
-  // Edit modal handlers
   const handleEditClick = (event) => {
     setEventToEdit(event);
     setEditModalOpen(true);
   };
-
   const handleEditModalClose = () => {
     setEditModalOpen(false);
     setEventToEdit(null);
   };
-
-  const handleEventUpdate = async (updatedEvent) => {
-    await refetchEvents(); // Re-fetch all events after edit
-  };
-
-  // Cancel event handler
+  const handleEventUpdate = async () => await refetchEvents();
   const handleClickCancel = (eventId, eventTitle) => {
     setEventToCancel({ _id: eventId, title: eventTitle });
     setOpenCancelDialog(true);
   };
-
   const handleCloseCancelDialog = () => {
     setOpenCancelDialog(false);
     setEventToCancel(null);
@@ -115,212 +82,65 @@ function LiveEvents() {
       setCancelLoading(true);
       const token = localStorage.getItem('accessToken');
       await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/${eventToCancel._id}/cancel`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       toast.success(`Event "${eventToCancel.title}" canceled successfully!`);
       await refetchEvents();
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Failed to cancel event.';
-      toast.error(errorMessage);
+      toast.error(err.response?.data?.message || 'Failed to cancel event.');
     } finally {
       setCancelLoading(false);
       setEventToCancel(null);
     }
   };
 
-  if (!user || user.role !== 'organizer') {
-    return <p className="text-red-500">Access Denied: You must be an organizer to view live events.</p>;
-  }
-
-  if (isLoading) {
-    return <div className="text-center py-8"><span className="animate-spin inline-block w-8 h-8 border-4 border-indigo-500 border-solid rounded-full border-r-transparent"></span> Loading live events...</div>;
-  }
-
-  if (error) {
-    return <p className="text-red-500 text-center py-8">Error: {error}</p>;
-  }
+  if (!user || user.role !== 'organizer') return <div className="text-center text-red-500 py-8">Access Denied.</div>;
+  if (isLoading) return <div className="flex justify-center items-center h-48"><Loader2 className="w-6 h-6 animate-spin mr-2" /><span>Loading live events...</span></div>;
+  if (error) return <div className="text-center text-red-500 py-8">Error: {error}</div>;
 
   return (
-    <Fragment>
-      <Box sx={{ p: 3, backgroundColor: 'white', borderRadius: '8px', boxShadow: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h5" component="h3" sx={{ fontWeight: 'bold', color: '#333' }}>
-            Your Live Events
-          </Typography>
-        </Box>
+    <>
+      <div className="p-6 bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800">
+        <div className="flex justify-between items-center mb-6"><h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Your Live Events</h3></div>
         {liveEvents.length === 0 ? (
-          <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            No live events right now.
-          </Typography>
+          <div className="text-center text-zinc-600 dark:text-zinc-400 py-8">No live events right now.</div>
         ) : (
-          <Grid container spacing={4}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {liveEvents.map(event => (
-              <Grid item key={event._id} xs={12} sm={6} md={6}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: 6,
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s',
-                    '&:hover': { transform: 'scale(1.02)' },
-                  }}
-                  onClick={() => handleCardClick(event._id)}
-                >
-                  {event.thumbnail ? (
-                    <CardMedia
-                      component="img"
-                      height="280"
-                      image={event.thumbnail}
-                      alt={event.title}
-                      sx={{ objectFit: 'contain', backgroundColor: '#f0f0f0' }}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        height: 280,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#e0e0e0',
-                        color: '#616161',
-                        fontSize: '1.2rem',
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        px: 2,
-                      }}
-                    >
-                      No Image Available
-                    </Box>
-                  )}
-                  <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                    <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: 'bold', color: '#1a237e', fontSize: '1.2rem', lineHeight: 1.3 }}>
-                      {event.title}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, color: '#555' }}>
-                      <EventIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                      <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-                        {dayjs(event.date).format('ddd, MMM D, YYYY')}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, color: '#555' }}>
-                      <AccessTimeIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                      <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
-                        {event.startTime} - {event.endTime}
-                      </Typography>
-                    </Box>
-                    {event.meetingLink && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, color: '#555' }}>
-                        <VideocamIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                        <Typography variant="body2" component="a" href={event.meetingLink} target="_blank" rel="noopener noreferrer" sx={{ color: 'blue.600', textDecoration: 'none', fontSize: '0.9rem', '&:hover': { textDecoration: 'underline' } }}>
-                          Join Link
-                        </Typography>
-                      </Box>
-                    )}
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', fontSize: '0.85rem' }}>
-                      {event.description || 'No description provided.'}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                      {/* If event is live, show red bouncy Live/Join button, else show edit/delete */}
-                      <Button
-                        variant="contained"
-                        color="error"
-                        sx={{
-                          animation: 'pulse 1s infinite',
-                          '@keyframes pulse': {
-                            '0%': { boxShadow: '0 0 0 0 rgba(239,68,68, 0.7)' },
-                            '70%': { boxShadow: '0 0 0 10px rgba(239,68,68, 0)' },
-                            '100%': { boxShadow: '0 0 0 0 rgba(239,68,68, 0)' },
-                          },
-                          fontWeight: 'bold',
-                        }}
-                        href={event.meetingLink || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        LIVE
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<ReportProblemIcon />}
-                        disabled={cancelLoading}
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleClickCancel(event._id, event.title);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Card key={event._id} className="h-full flex flex-col shadow-lg rounded-xl overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl border border-zinc-200 dark:border-zinc-700" onClick={() => handleCardClick(event._id)}>
+                <div className="h-72 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                  <img src={event.thumbnail || '/placeholder.png'} alt={event.title} className="w-full h-full object-cover"/>
+                </div>
+                <CardContent className="flex-grow p-4">
+                  <h4 className="text-xl font-bold text-indigo-700 dark:text-indigo-400 mb-3 line-clamp-2 leading-tight">{event.title}</h4>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm"><Calendar className="w-4 h-4 mr-2" /><span>{dayjs(event.date).format('ddd, MMM D, YYYY')}</span></div>
+                    <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm"><Clock className="w-4 h-4 mr-2" /><span>{convertUTCToLocal(event.date, event.startTime).displayTime} - {convertUTCToLocal(event.date, event.endTime).displayTime}</span></div>
+                    {event.meetingLink && (<div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm"><Video className="w-4 h-4 mr-2" /><a href={event.meetingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline" onClick={(e) => e.stopPropagation()}>Join Link</a></div>)}
+                  </div>
+                  <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4 line-clamp-3">{event.description || 'No description provided.'}</p>
+                  <div className="flex gap-3 mt-auto">
+                    <Button className="bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse shadow-lg" href={event.meetingLink || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>LIVE</Button>
+                    <Button variant="outline" className="text-red-600 dark:text-red-400 border-red-600 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950" disabled={cancelLoading} onClick={(e) => { e.stopPropagation(); handleClickCancel(event._id, event.title); }}><AlertTriangle className="w-4 h-4 mr-1" />{cancelLoading ? 'Canceling...' : 'Cancel'}</Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </Grid>
+          </div>
         )}
-      </Box>
-      {selectedEventId && (
-        <EventDetailModal
-          eventId={selectedEventId}
-          open={Boolean(selectedEventId)}
-          onClose={handleCloseModal}
-        />
-      )}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={handleCloseConfirmDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{"Confirm Deletion"}</DialogTitle>
+      </div>
+      {selectedEventId && <EventDetailModal eventId={selectedEventId} open={Boolean(selectedEventId)} onClose={handleCloseModal} />}
+      {editModalOpen && <EditEventModal event={eventToEdit} open={editModalOpen} onClose={handleEditModalClose} onEventUpdate={handleEventUpdate} />}
+      <Dialog open={openCancelDialog} onOpenChange={setOpenCancelDialog}>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {eventToDelete && `Are you sure you want to delete the event: "${eventToDelete.title}"? This action cannot be undone.`}
-          </DialogContentText>
+          <DialogHeader><DialogTitle>Confirm Cancel</DialogTitle><DialogDescription>Are you sure you want to cancel "{eventToCancel?.title}"?</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseCancelDialog}>Back</Button>
+            <Button variant="destructive" onClick={confirmCancel} disabled={cancelLoading}>{cancelLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Confirm Cancel'}</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={confirmDelete} color="error" autoFocus>
-            OK
-          </Button>
-        </DialogActions>
       </Dialog>
-      <EditEventModal
-        open={editModalOpen}
-        onClose={handleEditModalClose}
-        event={eventToEdit}
-        onUpdate={handleEventUpdate}
-      />
-      <Dialog
-        open={openCancelDialog}
-        onClose={handleCloseCancelDialog}
-        aria-labelledby="cancel-dialog-title"
-        aria-describedby="cancel-dialog-description"
-      >
-        <DialogTitle id="cancel-dialog-title">{"Confirm Cancellation"}</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="cancel-dialog-description">
-            {eventToCancel && `Are you sure you want to cancel the event: "${eventToCancel.title}"? This will notify all participants and cannot be undone.`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCancelDialog} color="primary">
-            No
-          </Button>
-          <Button onClick={confirmCancel} color="error" autoFocus disabled={cancelLoading}>
-            Yes, Cancel
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Fragment>
+    </>
   );
 }
 

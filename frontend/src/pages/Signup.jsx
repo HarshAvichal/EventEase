@@ -2,71 +2,87 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // Import useAuth hook
-
-// Material UI Imports
-import { TextField, Button, Box, Typography, Container, CircularProgress, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Eye, EyeOff, Loader2, UserPlus } from 'lucide-react';
 
 function Signup() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'participant', // Default role
+    role: 'participant',
   });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const navigate = useNavigate();
-  const { login } = useAuth(); // Destructure login from useAuth
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+  
+  const handleRoleChange = (value) => {
+    setFormData(prev => ({ ...prev, role: value }));
+    if (errors.role) {
+      setErrors(prev => ({ ...prev, role: '' }));
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
     
-    const nameRegex = /^[a-zA-Z]+$/;
-
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
-    } else if (!nameRegex.test(formData.firstName.trim())) {
-      newErrors.firstName = 'First name must contain only letters';
     }
-
+    
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
-    } else if (!nameRegex.test(formData.lastName.trim())) {
-      newErrors.lastName = 'Last name must contain only letters';
     }
     
-    const emailRegex = /^[^\s@]+@gmail\.com$/;
-    if (!formData.email.match(emailRegex)) {
-      newErrors.email = 'Please enter a valid Gmail address (e.g., example@gmail.com)';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
     }
     
-    if (formData.password.length < 8 ||
-        !/[A-Z]/.test(formData.password) ||
-        !/[a-z]/.test(formData.password) ||
-        !/\d/.test(formData.password) ||
-        !/[@$!%*?&]/.test(formData.password)) {
-      newErrors.password = 'Password must be at least 8 characters long, include an uppercase letter, a lowercase letter, a number, and a special character (e.g., @$!%*?&).';
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
     }
     
-    if (formData.password !== formData.confirmPassword) {
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (!formData.role) {
+      newErrors.role = 'Please select a role';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -85,21 +101,23 @@ function Signup() {
         password: formData.password,
         role: formData.role,
       });
-      
-      const { accessToken, refreshToken, user } = response.data; // Destructure data from response
-      login(user, accessToken, refreshToken); // Log user in via AuthContext
 
-      toast.success('Registration successful!');
-      // Navigate based on role
-      if (user.role === 'organizer') {
-        navigate('/dashboard/organizer');
-      } else if (user.role === 'participant') {
-        navigate('/dashboard/participant');
-      } else {
-        navigate('/dashboard'); // Fallback
+      if (response.data.success) {
+        const { token, user } = response.data;
+        login(token, user);
+        
+        toast.success('Account created successfully!');
+        
+        if (user.role === 'organizer') {
+          navigate('/dashboard/organizer');
+        } else if (user.role === 'participant') {
+          navigate('/dashboard/participant');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      const errorMessage = error.response?.data?.message || 'Signup failed. Please try again.';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -107,125 +125,99 @@ function Signup() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, mb: 8 }}>
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        p: 4,
-        bgcolor: 'background.paper',
-        borderRadius: 2,
-        boxShadow: 3,
-      }}>
-        <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
-            Create your account
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Or {' '}
-          <Link to="/login" style={{ textDecoration: 'none' }}>
-            <Button variant="text" sx={{ textTransform: 'none', p: 0 }}>sign in to your existing account</Button>
-          </Link>
-        </Typography>
+    <div className="max-w-md mx-auto py-16 px-4">
+      <Card className="shadow-lg border border-zinc-200 dark:border-zinc-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            Create Account
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleChange} placeholder="First Name" required />
+                {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleChange} placeholder="Last Name" required />
+                {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
+              </div>
+            </div>
 
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="firstName"
-            label="First Name"
-            name="firstName"
-            autoComplete="given-name"
-            value={formData.firstName}
-            onChange={handleChange}
-            error={!!errors.firstName}
-            helperText={errors.firstName}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-                required
-            fullWidth
-            id="lastName"
-            label="Last Name"
-            name="lastName"
-            autoComplete="family-name"
-            value={formData.lastName}
-                onChange={handleChange}
-            error={!!errors.lastName}
-            helperText={errors.lastName}
-            sx={{ mb: 2 }}
-              />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Email address"
-                name="email"
-                autoComplete="email"
-                value={formData.email}
-                onChange={handleChange}
-            error={!!errors.email}
-            helperText={errors.email}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-                name="password"
-            label="Password"
-                type="password"
-            id="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={handleChange}
-            error={!!errors.password}
-            helperText={errors.password}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-                name="confirmPassword"
-            label="Confirm Password"
-                type="password"
-            id="confirmPassword"
-                autoComplete="new-password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-            error={!!errors.confirmPassword}
-            helperText={errors.confirmPassword}
-            sx={{ mb: 2 }}
-          />
-          <FormControl fullWidth margin="normal" sx={{ mb: 3 }}>
-            <InputLabel id="role-select-label">I want to join as</InputLabel>
-            <Select
-              labelId="role-select-label"
-              id="role"
-              name="role"
-              value={formData.role}
-              label="I want to join as"
-              onChange={handleChange}
-            >
-              <MenuItem value="participant">Participant</MenuItem>
-              <MenuItem value="organizer">Organizer</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-            disabled={isLoading}
-          >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
-          </Button>
-        </Box>
-      </Box>
-    </Container>
+            {/* Email Field */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Enter your email" required />
+              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+            </div>
+
+            {/* Role Field */}
+            <div className="space-y-2">
+                <Label htmlFor="role">Role *</Label>
+                <Select name="role" value={formData.role} onValueChange={handleRoleChange}>
+                    <SelectTrigger id="role">
+                        <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="participant">Participant</SelectItem>
+                        <SelectItem value="organizer">Organizer</SelectItem>
+                    </SelectContent>
+                </Select>
+                {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
+            </div>
+
+            {/* Password Fields */}
+            <div className="space-y-2 relative">
+              <Label htmlFor="password">Password *</Label>
+              <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleChange} placeholder="Enter your password" required />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-zinc-500 hover:text-zinc-700">
+                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+            </div>
+
+            <div className="space-y-2 relative">
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm your password" required />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-9 text-zinc-500 hover:text-zinc-700">
+                {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+              {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+            </div>
+
+            {/* Submit Button */}
+            <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-lg font-semibold" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5 mr-2" />
+                  Create Account
+                </>
+              )}
+            </Button>
+
+            {/* Login Link */}
+            <div className="text-center">
+              <p className="text-zinc-600 dark:text-zinc-400">
+                Already have an account?{' '}
+                <Link to="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
+                  Login
+                </Link>
+              </p>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

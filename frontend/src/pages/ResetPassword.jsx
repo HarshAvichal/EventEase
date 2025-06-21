@@ -1,158 +1,200 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, Eye, EyeOff, CheckCircle, KeyRound } from 'lucide-react';
 
 function ResetPassword() {
+  const { token } = useParams();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     password: '',
-    confirmPassword: '',
+    confirmPassword: ''
   });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
-  const { token } = useParams(); // Get token from URL parameters
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const [error, setError] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (error) setError('');
+  };
+
+  const validateForm = () => {
+    if (!formData.password.trim()) {
+      setError('Password is required');
+      return false;
     }
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return false;
+    }
+    
+    if (!formData.confirmPassword.trim()) {
+      setError('Please confirm your password');
+      return false;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+    
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
-    setMessage('');
+    setError('');
+
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/reset-password/${token}`, {
-        password: formData.password,
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/reset-password`, {
+        token,
+        password: formData.password
       });
 
-      setMessage(response.data.message || 'Your password has been reset successfully!');
-      toast.success(response.data.message || 'Your password has been reset successfully!');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000); // Redirect to login after 2 seconds
-
+      if (response.data.success) {
+        setIsSuccess(true);
+        toast.success('Password reset successfully!');
+      }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to reset password. Please try again.';
+      setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isSuccess) {
+    return (
+      <div className="max-w-md mx-auto py-8 px-4">
+        <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <CheckCircle className="w-16 h-16 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400">
+              Password Reset Successfully!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-zinc-600 dark:text-zinc-400">
+              Your password has been reset. You can now log in with your new password.
+            </p>
+            <Button
+              onClick={() => navigate('/login')}
+              className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-white py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Reset Your Password
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+    <div className="max-w-md mx-auto py-8 px-4">
+      <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            Reset Password
+          </CardTitle>
+          <CardDescription>
             Enter your new password below.
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                New Password
-              </label>
-              <input
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-2 relative">
+              <Label htmlFor="password">New Password *</Label>
+              <Input
                 id="password"
                 name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className={`mt-1 appearance-none block w-full px-3 py-2 border ${
-                  errors.password ? 'border-red-300' : 'border-gray-300'
-                } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-                placeholder="Enter your new password"
+                type={showPassword ? 'text' : 'password'}
                 value={formData.password}
                 onChange={handleChange}
+                placeholder="Enter your new password"
+                required
+                className={error.includes('password') ? "border-red-500" : ""}
               />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-9 text-zinc-500 hover:text-zinc-700"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
 
-            {/* Confirm Password Field */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm New Password
-              </label>
-              <input
+            <div className="space-y-2 relative">
+              <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+              <Input
                 id="confirmPassword"
                 name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                className={`mt-1 appearance-none block w-full px-3 py-2 border ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-                placeholder="Confirm your new password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 value={formData.confirmPassword}
                 onChange={handleChange}
+                placeholder="Confirm your new password"
+                required
+                className={error.includes('match') ? "border-red-500" : ""}
               />
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-9 text-zinc-500 hover:text-zinc-700"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-          </div>
-
-          <div>
-            <button
+            
+            <Button
               type="submit"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-lg font-semibold"
               disabled={isLoading}
-              className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                isLoading ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
             >
               {isLoading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Resetting password...
-                </span>
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Resetting...
+                </>
               ) : (
-                'Reset Password'
+                <>
+                  <KeyRound className="w-5 h-5 mr-2" />
+                  Reset Password
+                </>
               )}
-            </button>
-          </div>
-          {message && (
-            <p className="mt-4 text-center text-sm text-green-600">{message}</p>
-          )}
-          <div className="text-center text-sm mt-4">
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Back to Login
-            </Link>
-          </div>
-        </form>
-      </div>
+            </Button>
+            
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

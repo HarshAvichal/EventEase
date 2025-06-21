@@ -103,6 +103,7 @@ function UpcomingEvents() {
         <div className="text-gray-500 text-center">No upcoming events found.</div>
       ) : (
         events
+          .filter(event => event.status !== 'canceled')
           .slice()
           .sort((a, b) => {
             const aDate = dayjs(a.date + 'T' + a.startTime);
@@ -111,12 +112,11 @@ function UpcomingEvents() {
           })
           // Remove events that are currently live
           .filter(event => {
-            const now = dayjs();
-            const eventStart = dayjs(event.date + 'T' + event.startTime);
-            const eventEnd = dayjs(event.date + 'T' + event.endTime);
+            const now = dayjs.utc();
+            const eventStart = dayjs.utc(event.date + 'T' + event.startTime);
             // Debug: Log filter decision
-            console.log(`Filtering event: ${event.title}, now: ${now.toISOString()}, start: ${eventStart.toISOString()}, end: ${eventEnd.toISOString()}, show:`, now.isBefore(eventStart) || now.isAfter(eventEnd));
-            return now.isBefore(eventStart) || now.isAfter(eventEnd);
+            console.log(`Filtering event: ${event.title}, now: ${now.toISOString()}, start: ${eventStart.toISOString()}, show:`, now.isBefore(eventStart));
+            return now.isBefore(eventStart);
           })
           .filter(event => !rsvpdLiveEventIds.includes(event._id))
           .map(event => (

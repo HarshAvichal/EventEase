@@ -2,117 +2,150 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2, CheckCircle, Mail } from 'lucide-react';
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState('');
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    setEmail(e.target.value);
-    if (errors.email) {
-      setErrors(prev => ({ ...prev, email: '' }));
-    }
-  };
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) {
+    
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
+    
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
     setIsLoading(true);
-    setMessage('');
+    setError('');
+
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/request-reset`, { email });
-      setMessage(response.data.message || 'Password reset link sent to your email!');
-      toast.success(response.data.message || 'Password reset link sent to your email!');
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/forgot-password`, {
+        email: email.trim()
+      });
+
+      if (response.data.success) {
+        setIsSubmitted(true);
+        toast.success('Password reset link sent to your email!');
+      }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to send password reset email. Please try again.';
+      const errorMessage = error.response?.data?.message || 'Failed to send reset email. Please try again.';
+      setError(errorMessage);
       toast.error(errorMessage);
-    }
-    finally {
+    } finally {
       setIsLoading(false);
     }
   };
 
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (error) setError('');
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="max-w-md mx-auto py-24 px-4">
+        <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <CheckCircle className="w-16 h-16 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400">
+              Check Your Email
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-zinc-600 dark:text-zinc-400">
+              We've sent a password reset link to <strong className="text-zinc-900 dark:text-zinc-100">{email}</strong>
+            </p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Please check your email and click the link to reset your password. 
+              If you don't see the email, check your spam folder.
+            </p>
+            <Button asChild className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Link to="/login">Back to Login</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-white py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Forgot Your Password?
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your email address to receive a password reset link.
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
+    <div className="max-w-md mx-auto py-24 px-4">
+      <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            Forgot Password
+          </CardTitle>
+          <CardDescription>
+            Enter your email address and we'll send you a link to reset your password.
+          </CardDescription>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
                 id="email"
                 name="email"
                 type="email"
-                autoComplete="email"
-                required
-                className={`mt-1 appearance-none block w-full px-3 py-2 border ${
-                  errors.email ? 'border-red-300' : 'border-gray-300'
-                } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
-                placeholder="Enter your email address"
                 value={email}
-                onChange={handleChange}
+                onChange={handleEmailChange}
+                placeholder="Enter your email"
+                required
+                autoFocus
+                className={error ? "border-red-500" : ""}
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-              )}
             </div>
-          </div>
-
-          <div>
-            <button
+            
+            <Button
               type="submit"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-lg font-semibold"
               disabled={isLoading}
-              className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                isLoading ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
             >
               {isLoading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   Sending...
-                </span>
+                </>
               ) : (
-                'Send Reset Link'
+                <>
+                  <Mail className="w-5 h-5 mr-2" />
+                  Send Reset Link
+                </>
               )}
-            </button>
-          </div>
-          {message && (
-            <p className="mt-4 text-center text-sm text-green-600">{message}</p>
-          )}
-          <div className="text-center text-sm">
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Back to Login
-            </Link>
-          </div>
-        </form>
-      </div>
+            </Button>
+            
+            <div className="text-center">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Remember your password?{' '}
+                <Link to="/login" className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
+                  Login
+                </Link>
+              </p>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

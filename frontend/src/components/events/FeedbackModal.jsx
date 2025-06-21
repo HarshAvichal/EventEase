@@ -1,22 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Box, Typography, Button, TextField, CircularProgress, Tabs, Tab, Rating, List, ListItem, ListItemText, Divider } from '@mui/material';
-import { FaUsers } from 'react-icons/fa';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FaStar, FaUsers } from 'react-icons/fa';
+import { Loader2, X } from 'lucide-react';
 
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  borderRadius: '8px',
-  boxShadow: 24,
-  p: 4,
-  outline: 'none',
+const StarRating = ({ rating, setRating, readOnly = false, size = 'large' }) => {
+  const [hover, setHover] = useState(null);
+  const starSize = size === 'large' ? 'w-8 h-8' : 'w-4 h-4';
+
+  return (
+    <div className="flex items-center">
+      {[...Array(5)].map((_, index) => {
+        const ratingValue = index + 1;
+        return (
+          <label key={index}>
+            <input
+              type="radio"
+              name="rating"
+              value={ratingValue}
+              onClick={() => !readOnly && setRating(ratingValue)}
+              className="hidden"
+            />
+            <FaStar
+              className={`cursor-pointer ${readOnly ? '' : 'transition-colors'}`}
+              color={ratingValue <= (hover || rating) ? '#ffc107' : '#e4e5e9'}
+              onMouseEnter={() => !readOnly && setHover(ratingValue)}
+              onMouseLeave={() => !readOnly && setHover(null)}
+              size={size === 'large' ? 24 : 16}
+            />
+          </label>
+        );
+      })}
+    </div>
+  );
 };
 
 const FeedbackModal = ({ open, onClose, event, participantId, authAxios, attendedCount }) => {
-  const [tab, setTab] = useState(0); // 0: Give Feedback, 1: View Feedback
+  const [activeTab, setActiveTab] = useState('give');
   const [feedbackList, setFeedbackList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [myFeedback, setMyFeedback] = useState(null);
@@ -30,32 +59,38 @@ const FeedbackModal = ({ open, onClose, event, participantId, authAxios, attende
     if (!event || !open) return;
     setLoading(true);
     setError('');
-    // Fetch all feedback for this event
+    setMyFeedback(null);
+    setRating(0);
+    setComment('');
+    
     authAxios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/feedback/${event._id || event.id}`)
       .then(res => {
-        setFeedbackList(res.data.feedback || []);
-        // Check if current user has already submitted feedback
-        const mine = (res.data.feedback || []).find(fb => fb.participantId === participantId);
-        setMyFeedback(mine || null);
-        if (mine) {
-          setRating(mine.rating);
-          setComment(mine.comment);
-        } else {
-          setRating(0);
-          setComment('');
+        const feedback = res.data.feedback || [];
+        setFeedbackList(feedback);
+        if (!isOrganizerView) {
+          const mine = feedback.find(fb => fb.participantId === participantId);
+          if (mine) {
+            setMyFeedback(mine);
+            setRating(mine.rating);
+            setComment(mine.comment);
+          }
         }
       })
       .catch(() => setFeedbackList([]))
       .finally(() => setLoading(false));
-  }, [event, open, participantId, authAxios]);
+  }, [event, open, participantId, authAxios, isOrganizerView]);
 
-  // Always reset to 'Give Feedback' tab when modal opens for participant
   useEffect(() => {
-    console.log('[FeedbackModal] useEffect: open =', open, 'isOrganizerView =', isOrganizerView);
-    if (open && !isOrganizerView) {
-      setTab(0);
+    if (open) {
+      if (isOrganizerView) {
+        setActiveTab('view');
+      } else {
+        // Default to 'give' for participants, but switch if they've already submitted
+        const mine = feedbackList.find(fb => fb.participantId === participantId);
+        setActiveTab(mine ? 'view' : 'give');
+      }
     }
-  }, [open, isOrganizerView]);
+  }, [isOrganizerView, open, feedbackList, participantId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,8 +99,7 @@ const FeedbackModal = ({ open, onClose, event, participantId, authAxios, attende
     try {
       await authAxios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/feedback/${event._id || event.id}`, { rating, comment });
       setMyFeedback({ rating, comment, participantId });
-      setTab(1); // Switch to view feedback
-      // Refetch feedback list
+      setActiveTab('view');
       const res = await authAxios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/events/feedback/${event._id || event.id}`);
       setFeedbackList(res.data.feedback || []);
     } catch (err) {
@@ -76,79 +110,83 @@ const FeedbackModal = ({ open, onClose, event, participantId, authAxios, attende
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Box sx={style}>
-        <Typography variant="h6" gutterBottom>
-          Feedback for {event?.title}
-        </Typography>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Feedback for {event?.title}</DialogTitle>
+        </DialogHeader>
+        
         {isOrganizerView && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <FaUsers style={{ color: '#1976d2', marginRight: 8 }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+          <div className="flex items-center gap-2 mb-4 text-zinc-600 dark:text-zinc-400">
+            <FaUsers className="text-primary" />
+            <span className="font-semibold">
               {event?.computedStatus === 'completed' && typeof attendedCount === 'number'
                 ? attendedCount
                 : event?.registrationCount || 0} Attended
-            </Typography>
-          </Box>
+            </span>
+          </div>
         )}
-        <Tabs value={isOrganizerView ? 1 : tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-          {!isOrganizerView && <Tab label="Give Feedback" />}
-          <Tab label="View Feedback" />
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            {!isOrganizerView && <TabsTrigger value="give">Give Feedback</TabsTrigger>}
+            <TabsTrigger value="view" className={!isOrganizerView ? "" : "col-span-2"}>View Feedback</TabsTrigger>
+          </TabsList>
+          
+          {!isOrganizerView && (
+            <TabsContent value="give">
+              {myFeedback ? (
+                <p className="text-green-600 dark:text-green-400 p-4 text-center">You have already submitted feedback for this event.</p>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                  <div>
+                    <p className="font-medium mb-2">Rating *</p>
+                    <StarRating rating={rating} setRating={setRating} />
+                  </div>
+                  <Textarea
+                    placeholder="Your comment *"
+                    value={comment}
+                    onChange={e => setComment(e.target.value)}
+                    required
+                    rows={4}
+                  />
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+                  <Button type="submit" disabled={submitting || !rating || !comment} className="w-full">
+                    {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Submit Feedback'}
+                  </Button>
+                </form>
+              )}
+            </TabsContent>
+          )}
+
+          <TabsContent value="view">
+            {loading ? (
+              <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin" /></div>
+            ) : (
+              <div className="max-h-64 overflow-y-auto space-y-4 pt-4">
+                {feedbackList.length === 0 ? (
+                  <p className="text-zinc-500 text-center">No feedback yet.</p>
+                ) : feedbackList.map((fb, idx) => (
+                  <div key={idx} className="border-b pb-4 last:border-b-0">
+                    <div className="flex items-center mb-1">
+                      <StarRating rating={fb.rating} readOnly size="small" />
+                    </div>
+                    <p className="text-sm mb-1">{fb.comment}</p>
+                    <p className="text-xs text-zinc-500 text-right"> - {fb.participantName || 'Anonymous'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
-        {tab === 0 && !isOrganizerView && (
-          myFeedback ? (
-            <Typography color="success.main" sx={{ mb: 2 }}>You have already submitted feedback for this event.</Typography>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <Box sx={{ mb: 2 }}>
-                <Typography component="legend">Rating</Typography>
-                <Rating
-                  name="rating"
-                  value={rating}
-                  onChange={(_, newValue) => setRating(newValue)}
-                  size="large"
-                  required
-                />
-              </Box>
-              <TextField
-                label="Comment"
-                multiline
-                minRows={3}
-                fullWidth
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                required
-                sx={{ mb: 2 }}
-              />
-              {error && <Typography color="error" sx={{ mb: 1 }}>{error}</Typography>}
-              <Button type="submit" variant="contained" color="primary" disabled={submitting || !rating || !comment} fullWidth>
-                {submitting ? <CircularProgress size={24} /> : 'Submit Feedback'}
-              </Button>
-            </form>
-          )
-        )}
-        {(tab === 1 || isOrganizerView) && (
-          loading ? <CircularProgress /> : (
-            <List>
-              {feedbackList.length === 0 ? (
-                <Typography color="text.secondary">No feedback yet.</Typography>
-              ) : feedbackList.map((fb, idx) => (
-                <React.Fragment key={idx}>
-                  <ListItem alignItems="flex-start">
-                    <ListItemText
-                      primary={<span><Rating value={fb.rating} readOnly size="small" /> {fb.comment}</span>}
-                      secondary={fb.participantName || 'Anonymous'}
-                    />
-                  </ListItem>
-                  {idx < feedbackList.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          )
-        )}
-        <Button onClick={onClose} sx={{ mt: 2 }} fullWidth variant="outlined">Close</Button>
-      </Box>
-    </Modal>
+        
+        <DialogFooter className="mt-4">
+          <DialogClose asChild>
+            <Button variant="outline" className="w-full"><X className="w-4 h-4 mr-2" />Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

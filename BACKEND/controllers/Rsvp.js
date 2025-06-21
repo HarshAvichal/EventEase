@@ -21,8 +21,8 @@ export const rsvpEvent = async (req, res, next) => {
             return res.status(404).json({ message: "Event not found" });
         }
 
-        const currentDateTime = new Date(); // Local time
-        const eventStartDateTime = new Date(`${event.date}T${event.startTime}`); // Local time
+        const currentDateTime = new Date(); // Current UTC time
+        const eventStartDateTime = new Date(`${event.date}T${event.startTime}:00Z`); // UTC time
         if (currentDateTime >= eventStartDateTime) {
             console.log('DEBUG RSVP: RSVP not allowed after event start');
             return res.status(400).json({
@@ -107,9 +107,9 @@ export const cancelRSVP = async (req, res, next) => {
         }
 
         // Prevent RSVP cancellation for live or completed events
-        const currentDateTime = new Date(); // Local time
-        const eventStartDateTime = new Date(`${event.date}T${event.startTime}`); // Local time
-        const eventEndDateTime = new Date(`${event.date}T${event.endTime}`); // Local time
+        const currentDateTime = new Date(); // Current UTC time
+        const eventStartDateTime = new Date(`${event.date}T${event.startTime}:00Z`); // UTC time
+        const eventEndDateTime = new Date(`${event.date}T${event.endTime}:00Z`); // UTC time
 
         if (currentDateTime >= eventStartDateTime && currentDateTime <= eventEndDateTime) {
             return res.status(400).json({

@@ -5,12 +5,17 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-dayjs.extend(utc);
+import timezone from 'dayjs/plugin/timezone';
+import { convertLocalToUTC } from '../utils/dateUtils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Calendar, Clock, Link, FileImage, Plus } from 'lucide-react';
 
-// Material UI Imports
-import { TextField, Button, Box, Typography, Container, CircularProgress } from '@mui/material';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 function CreateEvent() {
   const { user } = useAuth();
@@ -18,14 +23,14 @@ function CreateEvent() {
 
   const [eventData, setEventData] = useState({
     title: '',
-    date: null,
+    date: '',
     description: '',
     startTime: '',
     endTime: '',
     meetingLink: '',
     thumbnail: null,
   });
-
+  
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -34,7 +39,7 @@ function CreateEvent() {
     if (!eventData.title.trim()) {
       newErrors.title = 'Event title is required';
     }
-    if (!eventData.date || !dayjs(eventData.date).isValid()) {
+    if (!eventData.date) {
       newErrors.date = 'Valid event date is required';
     }
     if (!eventData.description.trim()) {
@@ -67,15 +72,9 @@ function CreateEvent() {
     } else {
       setEventData({ ...eventData, [name]: value });
     }
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handleDateChange = (newDate) => {
-    setEventData(prev => ({ ...prev, date: newDate }));
-    if (errors.date) {
-      setErrors(prev => ({ ...prev, date: '' }));
     }
   };
 
@@ -88,18 +87,25 @@ function CreateEvent() {
     setIsLoading(true);
 
     const formData = new FormData();
-    // Send local date/time as entered by the user (no UTC conversion)
-    if (eventData.date && eventData.startTime && eventData.endTime) {
-      const localDate = dayjs(eventData.date).format('YYYY-MM-DD');
-      formData.append('date', localDate);
-      formData.append('startTime', eventData.startTime);
-      formData.append('endTime', eventData.endTime);
+    
+    // Manually append all fields for reliability
+    const { date: localDate, startTime, endTime, title, description, meetingLink, thumbnail } = eventData;
+
+    if (localDate && startTime && endTime) {
+      const { date: utcDate, time: utcStartTime } = convertLocalToUTC(localDate, startTime);
+      const { time: utcEndTime } = convertLocalToUTC(localDate, endTime);
+      
+      formData.append('date', utcDate);
+      formData.append('startTime', utcStartTime);
+      formData.append('endTime', utcEndTime);
     }
-    for (const key in eventData) {
-      if (['date', 'startTime', 'endTime'].includes(key)) continue; // Already handled above
-      if (eventData[key] !== null) {
-        formData.append(key, eventData[key]);
-      }
+    
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('meetingLink', meetingLink);
+
+    if (thumbnail) {
+      formData.append('thumbnail', thumbnail);
     }
 
     try {
@@ -123,144 +129,205 @@ function CreateEvent() {
 
   if (!user || user.role !== 'organizer') {
     toast.error("You are not authorized to create events.");
-    return <p>Access Denied</p>;
+    return (
+      <div className="text-center text-red-500 py-8">
+        Access Denied
+      </div>
+    );
   }
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, mb: 8 }}>
-      <Box sx={{ 
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        p: 4,
-        bgcolor: 'background.paper',
-        borderRadius: 2,
-        boxShadow: 3
-      }}>
-        <Typography component="h1" variant="h5" sx={{ mb: 1 }}>
-          Create a New Event
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Fill out the details below to create your event.
-        </Typography>
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="title"
-            label="Event Title"
-            name="title"
-            autoComplete="off"
-            value={eventData.title}
-            onChange={handleChange}
-            error={!!errors.title}
-            helperText={errors.title}
-            sx={{ mb: 2 }}
-          />
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Event Date"
-              value={eventData.date}
-              onChange={handleDateChange}
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  required 
-                  fullWidth 
-                  margin="normal"
-                  error={!!errors.date}
-                  helperText={errors.date}
-                  sx={{ mb: 2 }}
-                />
-              )}
-            />
-          </LocalizationProvider>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="startTime"
-            label="Start Time (HH:mm)"
-            name="startTime"
-            type="time"
-            value={eventData.startTime}
-            onChange={handleChange}
-            error={!!errors.startTime}
-            helperText={errors.startTime}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ step: 300 }}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="endTime"
-            label="End Time (HH:mm)"
-            name="endTime"
-            type="time"
-            value={eventData.endTime}
-            onChange={handleChange}
-            error={!!errors.endTime}
-            helperText={errors.endTime}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ step: 300 }}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            id="meetingLink"
-            label="Meeting Link (Optional)"
-            name="meetingLink"
-            value={eventData.meetingLink}
-            onChange={handleChange}
-            error={!!errors.meetingLink}
-            helperText={errors.meetingLink || "If not provided, a Jitsi meeting link will be auto-generated."}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="description"
-            label="Description"
-            name="description"
-            multiline
-            rows={4}
-            value={eventData.description}
-            onChange={handleChange}
-            error={!!errors.description}
-            helperText={errors.description}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            id="thumbnail"
-            label="Event Thumbnail (Optional)"
-            name="thumbnail"
-            type="file"
-            onChange={handleChange}
-            error={!!errors.thumbnail}
-            helperText={errors.thumbnail || "Upload an image for your event (optional)"}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ accept: 'image/*' }}
-            sx={{ mb: 2 }}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-            disabled={isLoading}
+    <div className="max-w-2xl mx-auto py-8 px-4">
+      <Card className="shadow-lg border border-zinc-200 dark:border-zinc-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+            Create a New Event
+          </CardTitle>
+          <p className="text-zinc-600 dark:text-zinc-400 mt-2">
+            Fill out the details below to create your event.
+          </p>
+        </CardHeader>
+        
+        <CardContent>
+          <form 
+            onSubmit={handleSubmit} 
+            className="space-y-6"
           >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create Event'}
-          </Button>
-        </Box>
-      </Box>
-    </Container>
+            {/* Event Title */}
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Event Title *
+              </Label>
+              <Input
+                id="title"
+                name="title"
+                type="text"
+                value={eventData.title}
+                onChange={handleChange}
+                placeholder="Enter event title"
+                className={errors.title ? "border-red-500" : ""}
+                required
+              />
+              {errors.title && (
+                <p className="text-sm text-red-500">{errors.title}</p>
+              )}
+            </div>
+
+            {/* Event Date */}
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                Event Date *
+              </Label>
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                value={eventData.date}
+                onChange={handleChange}
+                className={errors.date ? "border-red-500" : ""}
+                required
+              />
+              {errors.date && (
+                <p className="text-sm text-red-500">{errors.date}</p>
+              )}
+            </div>
+
+            {/* Time Range */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Start Time *
+                </Label>
+                <Input
+                  id="startTime"
+                  name="startTime"
+                  type="time"
+                  value={eventData.startTime}
+                  onChange={handleChange}
+                  className={errors.startTime ? "border-red-500" : ""}
+                  required
+                />
+                {errors.startTime && (
+                  <p className="text-sm text-red-500">{errors.startTime}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endTime" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
+                  <Clock className="w-4 h-4 mr-2" />
+                  End Time *
+                </Label>
+                <Input
+                  id="endTime"
+                  name="endTime"
+                  type="time"
+                  value={eventData.endTime}
+                  onChange={handleChange}
+                  className={errors.endTime ? "border-red-500" : ""}
+                  required
+                />
+                {errors.endTime && (
+                  <p className="text-sm text-red-500">{errors.endTime}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Meeting Link */}
+            <div className="space-y-2">
+              <Label htmlFor="meetingLink" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
+                <Link className="w-4 h-4 mr-2" />
+                Meeting Link (Optional)
+              </Label>
+              <Input
+                id="meetingLink"
+                name="meetingLink"
+                type="url"
+                value={eventData.meetingLink}
+                onChange={handleChange}
+                placeholder="https://meet.google.com/..."
+                className={errors.meetingLink ? "border-red-500" : ""}
+              />
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                If not provided, a Jitsi meeting link will be auto-generated.
+              </p>
+              {errors.meetingLink && (
+                <p className="text-sm text-red-500">{errors.meetingLink}</p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Description *
+              </Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={eventData.description}
+                onChange={handleChange}
+                placeholder="Describe your event..."
+                rows={4}
+                className={errors.description ? "border-red-500" : ""}
+                required
+              />
+              {errors.description && (
+                <p className="text-sm text-red-500">{errors.description}</p>
+              )}
+            </div>
+
+            {/* Thumbnail */}
+            <div className="space-y-2">
+              <Label htmlFor="thumbnail" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
+                <FileImage className="w-4 h-4 mr-2" />
+                Thumbnail (Optional)
+              </Label>
+              <div className="flex items-center space-x-4">
+                <label
+                  htmlFor="thumbnail"
+                  className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Choose File
+                </label>
+                <input
+                  id="thumbnail"
+                  name="thumbnail"
+                  type="file"
+                  onChange={handleChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                {eventData.thumbnail && (
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    {eventData.thumbnail.name}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-lg font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Creating Event...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Event
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

@@ -1,22 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Box,
-  Typography,
-  CircularProgress
-} from '@mui/material';
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import { convertLocalToUTC, convertUTCToLocal } from '../../utils/dateUtils';
+import { Loader2, Save, X, Upload } from 'lucide-react';
 
-const EditEventModal = ({ open, onClose, event, onUpdate }) => {
+dayjs.extend(customParseFormat);
+
+const EditEventModal = ({ open, onClose, event, onEventUpdate }) => {
   const { authAxios } = useAuth();
+  const fileInputRef = useRef(null);
+  
   const [form, setForm] = useState({
     title: '',
     date: '',
@@ -31,16 +40,19 @@ const EditEventModal = ({ open, onClose, event, onUpdate }) => {
 
   useEffect(() => {
     if (event) {
+      const { date: localDate, time: localStartTime } = convertUTCToLocal(event.date, event.startTime);
+      const { time: localEndTime } = convertUTCToLocal(event.date, event.endTime);
+
       setForm({
         title: event.title || '',
-        date: event.date ? event.date.slice(0, 10) : '',
-        startTime: event.startTime || '',
-        endTime: event.endTime || '',
+        date: dayjs(localDate).format('YYYY-MM-DD'),
+        startTime: localStartTime || '',
+        endTime: localEndTime || '',
         meetingLink: event.meetingLink || '',
         description: event.description || '',
         thumbnail: event.thumbnail || '',
       });
-      setThumbnailFile(null);
+      setThumbnailFile(null); 
     }
   }, [event]);
 
@@ -50,58 +62,50 @@ const EditEventModal = ({ open, onClose, event, onUpdate }) => {
   };
 
   const handleThumbnailChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setThumbnailFile(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file) {
+      setThumbnailFile(file);
     }
+  };
+
+  const handleThumbnailButtonClick = () => {
+    fileInputRef.current.click();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      let thumbnailUrl = form.thumbnail;
+      let thumbnailUrl = event.thumbnail; 
+
       if (thumbnailFile) {
         const data = new FormData();
         data.append('file', thumbnailFile);
         data.append('upload_preset', 'eventease_present');
         const uploadRes = await axios.post('https://api.cloudinary.com/v1_1/da6kpwqmh/image/upload', data);
         thumbnailUrl = uploadRes.data.secure_url;
-        // Transform the URL for consistent card sizing
-        if (thumbnailUrl.includes('/upload/')) {
-          thumbnailUrl = thumbnailUrl.replace('/upload/', '/upload/w_300,h_200,c_fill/');
-        }
       }
-      // Send local date/time as entered by the user (no UTC conversion)
-      let localDate = form.date;
-      let localStartTime = form.startTime;
-      let localEndTime = form.endTime;
-      if (form.date && form.startTime && form.endTime) {
-        localDate = dayjs(form.date).format('YYYY-MM-DD');
-        localStartTime = form.startTime;
-        localEndTime = form.endTime;
-      }
-      const updatedEvent = {
-        ...form,
-        date: localDate,
-        startTime: localStartTime,
-        endTime: localEndTime,
+      
+      const { date: utcDate, time: utcStartTime } = convertLocalToUTC(form.date, form.startTime);
+      const { time: utcEndTime } = convertLocalToUTC(form.date, form.endTime);
+      
+      const updatedEventData = {
+        title: form.title,
+        description: form.description,
+        meetingLink: form.meetingLink,
         thumbnail: thumbnailUrl,
+        date: utcDate,
+        startTime: utcStartTime,
+        endTime: utcEndTime,
       };
-      // Test GET request to check interceptor
-      try {
-        await authAxios.get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/me`);
-      } catch (err) {
-        console.log('Debug - Test GET /me error:', err);
-      }
-      // Debug log for token and event
-      console.log('Debug - About to PATCH event. Token:', localStorage.getItem('accessToken'));
-      console.log('Debug - Event to update:', updatedEvent);
+
       await authAxios.patch(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/events/${event._id}`,
-        updatedEvent
+        updatedEventData
       );
+
       toast.success('Event updated successfully!');
-      onUpdate({ ...event, ...updatedEvent });
+      onEventUpdate();
       onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update event.');
@@ -111,99 +115,62 @@ const EditEventModal = ({ open, onClose, event, onUpdate }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Event</DialogTitle>
-      <DialogContent>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            label="Title"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
-          <TextField
-            margin="normal"
-            label="Date"
-            name="date"
-            type="date"
-            value={form.date}
-            onChange={handleChange}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            required
-          />
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField
-              margin="normal"
-              label="Start Time"
-              name="startTime"
-              type="time"
-              value={form.startTime}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              required
-              sx={{ flex: 1 }}
-            />
-            <TextField
-              margin="normal"
-              label="End Time"
-              name="endTime"
-              type="time"
-              value={form.endTime}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              required
-              sx={{ flex: 1 }}
-            />
-          </Box>
-          <TextField
-            margin="normal"
-            label="Meeting Link"
-            name="meetingLink"
-            value={form.meetingLink}
-            onChange={handleChange}
-            fullWidth
-            required
-          />
-          <TextField
-            margin="normal"
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            fullWidth
-            multiline
-            minRows={2}
-          />
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Thumbnail (optional)
-            </Typography>
-            <input type="file" accept="image/*" onChange={handleThumbnailChange} />
-            {form.thumbnail && !thumbnailFile && (
-              <Box sx={{ mt: 1 }}>
-                <img src={form.thumbnail} alt="Current Thumbnail" style={{ maxWidth: 120, borderRadius: 8 }} />
-              </Box>
-            )}
-            {thumbnailFile && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption">New image selected: {thumbnailFile.name}</Typography>
-              </Box>
-            )}
-          </Box>
-        </Box>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription>
+            Make changes to your event here. Click save when you're done.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input id="title" name="title" value={form.title} onChange={handleChange} required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input id="date" name="date" type="date" value={form.date} onChange={handleChange} required />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="startTime">Time</Label>
+               <div className="grid grid-cols-2 gap-2">
+                <Input id="startTime" name="startTime" type="time" value={form.startTime} onChange={handleChange} required />
+                <Input id="endTime" name="endTime" type="time" value={form.endTime} onChange={handleChange} required />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="meetingLink">Meeting Link</Label>
+            <Input id="meetingLink" name="meetingLink" value={form.meetingLink} onChange={handleChange} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" name="description" value={form.description} onChange={handleChange} rows={3} required />
+          </div>
+          <div className="space-y-2">
+            <Label>Thumbnail (Optional)</Label>
+            <div className="flex items-center gap-4">
+              <Button type="button" variant="outline" onClick={handleThumbnailButtonClick} className="flex-shrink-0">
+                <Upload className="w-4 h-4 mr-2" />
+                Choose File
+              </Button>
+              <span className="text-sm text-zinc-500 truncate">
+                {thumbnailFile ? thumbnailFile.name : (form.thumbnail ? 'Current image retained' : 'No file selected')}
+              </span>
+            </div>
+            <input id="thumbnail-upload" type="file" ref={fileInputRef} onChange={handleThumbnailChange} accept="image/*" className="hidden"/>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button type="button" variant="outline"><X className="w-4 h-4 mr-2" />Cancel</Button></DialogClose>
+            <Button type="submit" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="secondary" disabled={loading}>
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary" disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : 'Update Event'}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

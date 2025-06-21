@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../../context/AuthContext';
-import { Box, Typography, Grid, Card, CardContent, CardMedia, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import EventIcon from '@mui/icons-material/Event';
-import VideocamIcon from '@mui/icons-material/Videocam';
+import { Clock, Calendar, Video, Edit, Trash2, Loader2 } from 'lucide-react';
 import EventDetailModal from '../../../components/events/EventDetailModal';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import dayjs from 'dayjs';
 
 function AllUpcomingEvents() {
@@ -106,114 +106,127 @@ function AllUpcomingEvents() {
   };
 
   if (!user || user.role !== 'organizer') {
-    return <Typography color="error" sx={{ textAlign: 'center', py: 8 }}>Access Denied: You must be an organizer to view all upcoming events.</Typography>;
+    return (
+      <div className="text-center text-red-500 py-8">
+        Access Denied: You must be an organizer to view all upcoming events.
+      </div>
+    );
   }
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ ml: 2 }}>Loading all upcoming events...</Typography>
-      </Box>
+      <div className="flex justify-center items-center h-48">
+        <Loader2 className="w-6 h-6 animate-spin mr-2" />
+        <span className="text-lg">Loading all upcoming events...</span>
+      </div>
     );
   }
 
   if (error) {
-    return <Typography color="error" sx={{ textAlign: 'center', py: 8 }}>Error: {error}</Typography>;
+    return (
+      <div className="text-center text-red-500 py-8">
+        Error: {error}
+      </div>
+    );
   }
 
   return (
-    <Box sx={{ p: 3, backgroundColor: 'white', borderRadius: '8px', boxShadow: 3 }}>
-      <Typography variant="h5" component="h3" gutterBottom sx={{ mb: 4, fontWeight: 'bold', color: '#333' }}>
+    <div className="p-6 bg-white dark:bg-zinc-900 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800">
+      <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
         All Upcoming Events
-      </Typography>
+      </h3>
+      
       {events.length === 0 ? (
-        <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+        <div className="text-center text-zinc-600 dark:text-zinc-400 py-8">
           No upcoming events found. Create an event to see it here!
-        </Typography>
+        </div>
       ) : (
-        <Grid container spacing={4}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map(event => (
-            <Grid item key={event._id} xs={12} sm={6} md={4}> {/* Default to 3 cards per row for all events */}
-              <Card
-                sx={{ height: '100%', display: 'flex', flexDirection: 'column', boxShadow: 6, borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s', '&:hover': { transform: 'scale(1.02)' } }}
-                onClick={() => handleCardClick(event._id)}
-              >
-                {event.thumbnail ? (
-                  <CardMedia
-                    component="img"
-                    height="180"
-                    image={event.thumbnail}
+            <Card
+              key={event._id}
+              className="h-full flex flex-col shadow-lg rounded-xl overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl border border-zinc-200 dark:border-zinc-700"
+              onClick={() => handleCardClick(event._id)}
+            >
+              {event.thumbnail ? (
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={event.thumbnail}
                     alt={event.title}
-                    sx={{ objectFit: 'cover' }}
+                    className="w-full h-full object-cover"
                   />
-                ) : (
-                  <Box
-                    sx={{
-                      height: 180,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#e0e0e0',
-                      color: '#616161',
-                      fontSize: '1.1rem',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                      px: 2,
+                </div>
+              ) : (
+                <div className="h-48 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-lg font-semibold text-center px-4">
+                  No Image Available
+                </div>
+              )}
+              
+              <CardContent className="flex-grow p-4">
+                <h4 className="text-lg font-bold text-indigo-700 dark:text-indigo-400 mb-3 line-clamp-2">
+                  {event.title}
+                </h4>
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    <span>{dayjs(event.date).format('ddd, MMM D, YYYY')}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm">
+                    <Clock className="w-4 h-4 mr-2" />
+                    <span>{event.startTime} - {event.endTime}</span>
+                  </div>
+                  
+                  {event.meetingLink && (
+                    <div className="flex items-center text-zinc-600 dark:text-zinc-300 text-sm">
+                      <Video className="w-4 h-4 mr-2" />
+                      <a
+                        href={event.meetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Join Link
+                      </a>
+                    </div>
+                  )}
+                </div>
+                
+                <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4 line-clamp-3">
+                  {event.description || 'No description provided.'}
+                </p>
+                
+                <div className="flex justify-end gap-2 mt-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-indigo-700 dark:text-indigo-400 border-indigo-700 dark:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 dark:text-red-400 border-red-600 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent card click from opening modal
+                      handleClickDelete(event._id, event.title);
                     }}
                   >
-                    No Image Available
-                  </Box>
-                )}
-                <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                  <Typography variant="h6" component="div" gutterBottom sx={{ fontWeight: 'bold', color: '#1a237e', fontSize: '1.1rem' }}>
-                    {event.title}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, color: '#555' }}>
-                    <EventIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                      {dayjs(event.date).format('ddd, MMM D, YYYY')}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, color: '#555' }}>
-                    <AccessTimeIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                    <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                      {event.startTime} - {event.endTime}
-                    </Typography>
-                  </Box>
-                  {event.meetingLink && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: '#555' }}>
-                      <VideocamIcon sx={{ mr: 1, fontSize: '1rem' }} />
-                      <Typography variant="body2" component="a" href={event.meetingLink} target="_blank" rel="noopener noreferrer" sx={{ color: 'blue.600', textDecoration: 'none', fontSize: '0.85rem', '&:hover': { textDecoration: 'underline' } }}>
-                        Join Link
-                      </Typography>
-                    </Box>
-                  )}
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', fontSize: '0.8rem' }}>
-                    {event.description || 'No description provided.'}
-                  </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2, gap: 1 }}>
-                    <Button variant="outlined" size="small" sx={{ color: '#1a237e', borderColor: '#1a237e', '&:hover': { backgroundColor: '#e8eaf6' } }}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click from opening modal
-                        handleClickDelete(event._id, event.title);
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </Grid>
+        </div>
       )}
+      
       {selectedEventId && (
         <EventDetailModal
           eventId={selectedEventId}
@@ -221,29 +234,27 @@ function AllUpcomingEvents() {
           onClose={handleCloseModal}
         />
       )}
+      
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={handleCloseConfirmDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">{"Confirm Deletion"}</DialogTitle>
+      <Dialog open={openConfirmDialog} onOpenChange={setOpenConfirmDialog}>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            {eventToDelete && `Are you sure you want to delete the event: "${eventToDelete.title}"? This action cannot be undone.`}
-          </DialogContentText>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              {eventToDelete && `Are you sure you want to delete the event: "${eventToDelete.title}"? This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseConfirmDialog}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={confirmDelete} color="error" autoFocus>
-            OK
-          </Button>
-        </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }
 

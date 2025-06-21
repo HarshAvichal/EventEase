@@ -44,7 +44,7 @@ const eventSchema = new mongoose.Schema(
         },
         thumbnail: {
             type: String,
-            default: 'https://via.placeholder.com/300x200?text=No+Thumbnail',
+            trim: true,
         },
         rsvpList: [
             {
@@ -78,11 +78,11 @@ const eventSchema = new mongoose.Schema(
 );
 
 // Virtual field for computed status
-// Use local time for all calculations
+// Use UTC time for all calculations to ensure consistency across timezones
 eventSchema.virtual('computedStatus').get(function () {
-    const now = new Date();
-    const startDateTime = new Date(`${this.date}T${this.startTime}`); // Local time
-    const endDateTime = new Date(`${this.date}T${this.endTime}`);     // Local time
+    const now = new Date(); // Current UTC time
+    const startDateTime = new Date(`${this.date}T${this.startTime}:00Z`); // UTC time
+    const endDateTime = new Date(`${this.date}T${this.endTime}:00Z`);     // UTC time
 
     if (this.status === 'canceled') {
         return 'canceled';

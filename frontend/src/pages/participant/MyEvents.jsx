@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import EventCard from '../../components/events/EventCard';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { getEventStatus } from '../../utils/dateUtils';
 
 function MyEvents() {
   const { authAxios } = useAuth();
@@ -29,24 +30,25 @@ function MyEvents() {
           ...(res.data.myEvents.live || []),
           ...(res.data.myEvents.completed || [])
         ];
-        const now = dayjs();
+        
         const upcoming = [];
         const live = [];
+        
         allEvents.forEach(event => {
-          const eventStart = dayjs(event.date + 'T' + event.startTime);
-          const eventEnd = dayjs(event.date + 'T' + event.endTime);
           // If event is canceled, skip it entirely
           if (event.status === 'canceled') {
             return;
           }
-          if (now.isBefore(eventStart)) {
+
+          const status = getEventStatus(event.date, event.startTime, event.endTime, event.status);
+
+          if (status === 'upcoming') {
             upcoming.push(event);
-          } else if (now.isAfter(eventEnd)) {
-            // completed
-          } else {
+          } else if (status === 'live') {
             live.push(event);
           }
         });
+
         setUpcomingEvents(upcoming);
         setLiveEvents(live);
       } catch (err) {
@@ -108,8 +110,6 @@ function MyEvents() {
                 event={{ ...event, _id: event._id || event.id }}
                 participantCount={participantCounts[event._id || event.id]}
                 isRSVPd={true}
-                isLive={true}
-                onJoin={() => window.open(event.meetingLink, '_blank')}
               />
                 );
               })}
