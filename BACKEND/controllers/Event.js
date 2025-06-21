@@ -63,15 +63,6 @@ export const createEvent = async (req, res, next) => {
         // Get current UTC time
         const currentDateTime = new Date();
         
-        // Debug logs for troubleshooting UTC time issues
-        console.log('DEBUG - Event Creation (UTC):');
-        console.log('  Server now (UTC):', currentDateTime.toISOString());
-        console.log('  Received date:', date);
-        console.log('  Received startTime:', normalizedStartTime);
-        console.log('  Received endTime:', normalizedEndTime);
-        console.log('  eventStartDateTime (UTC):', eventStartDateTime.toISOString());
-        console.log('  eventEndDateTime (UTC):', eventEndDateTime.toISOString());
-        
         // Check if the event is in the past (using UTC comparison)
         if (eventStartDateTime <= currentDateTime) {
             return res.status(400).json({ message: "Event can't be in the past" });
@@ -139,12 +130,6 @@ export const getOrganizerUpcomingEvents = async (req, res, next) => {
         const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
         const currentTime = now.toISOString().split('T')[1].substring(0, 5); // HH:MM in UTC
 
-        // Debug logs for server time and query
-        console.log('DEBUG - getOrganizerUpcomingEvents (UTC):');
-        console.log('  Server now (UTC):', now.toISOString());
-        console.log('  todayDate (UTC):', todayDate);
-        console.log('  currentTime (UTC):', currentTime);
-
         const { page = 1, limit = 10 } = req.query;
 
         const query = {
@@ -157,18 +142,12 @@ export const getOrganizerUpcomingEvents = async (req, res, next) => {
                 },
             ],
         };
-        console.log('  Query:', JSON.stringify(query, null, 2));
 
         const totalItems = await Event.countDocuments(query);
         const events = await Event.find(query, "title date startTime endTime meetingLink status thumbnail description")
             .sort({ date: 1, startTime: 1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit));
-
-        // Log the date, startTime, and endTime for each event returned
-        events.forEach(event => {
-            console.log(`  Event: ${event.title} | date: ${event.date} | startTime: ${event.startTime} | endTime: ${event.endTime}`);
-        });
 
         // Append computedStatus to each event for frontend use if needed
         const eventsWithComputedStatus = events.map(event => ({
@@ -198,12 +177,6 @@ export const getOrganizerCompletedEvents = async (req, res, next) => {
         const todayDate = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
         const currentTime = now.toISOString().split('T')[1].substring(0, 5); // HH:MM in UTC
 
-        // Debug logs for server time and query
-        console.log('DEBUG - getOrganizerCompletedEvents (UTC):');
-        console.log('  Server now (UTC):', now.toISOString());
-        console.log('  todayDate (UTC):', todayDate);
-        console.log('  currentTime (UTC):', currentTime);
-
         const { page = 1, limit = 10 } = req.query;
 
         const query = {
@@ -216,18 +189,12 @@ export const getOrganizerCompletedEvents = async (req, res, next) => {
                 },
             ],
         };
-        console.log('  Query:', JSON.stringify(query, null, 2));
 
         const totalItems = await Event.countDocuments(query);
         const events = await Event.find(query, "title date startTime endTime meetingLink status thumbnail description rsvpList")
             .sort({ date: -1, endTime: -1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit));
-
-        // Log the date, startTime, and endTime for each event returned
-        events.forEach(event => {
-            console.log(`  Event: ${event.title} | date: ${event.date} | startTime: ${event.startTime} | endTime: ${event.endTime}`);
-        });
 
         // Append computedStatus and attendedCount to each event for frontend use if needed
         const eventsWithComputedStatus = events.map(event => {
@@ -274,23 +241,12 @@ export const getParticipantUpcomingEvents = async (req, res, next) => {
                 },
             ],
         };
-        console.log('DEBUG - Server now (UTC):', now.toISOString());
-        console.log('DEBUG - getParticipantUpcomingEvents Query (UTC):', JSON.stringify(query, null, 2));
-        console.log('DEBUG - currentTime (UTC):', currentTime, 'todayDate (UTC):', todayDate);
 
         const events = await Event.find(query, "title date startTime endTime type status thumbnail description organizerId")
             .populate('organizerId', 'firstName lastName')
             .sort({ date: 1, startTime: 1 })
             .skip((page - 1) * limit)
             .limit(parseInt(limit));
-
-        console.log('DEBUG - Events returned:', events.map(e => ({
-          title: e.title,
-          date: e.date,
-          startTime: e.startTime,
-          endTime: e.endTime,
-          status: e.status
-        })));
 
         // Append computedStatus and registrationCount to each event
         const eventsWithDetails = await Promise.all(events.map(async (event) => {
