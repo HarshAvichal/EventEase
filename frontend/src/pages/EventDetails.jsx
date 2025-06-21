@@ -165,7 +165,11 @@ function EventDetails() {
       <Card className="shadow-lg border-border overflow-hidden">
         <div className="w-full h-64 md:h-80 bg-muted">
           <img
-            src={event.thumbnail || '/placeholder.png'}
+            src={event.thumbnail || '/no_image.png'}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/no_image.png';
+            }}
             alt={event.title}
             className="w-full h-full object-cover"
           />

@@ -107,7 +107,7 @@ export const createEvent = async (req, res, next) => {
         // Get thumbnail URL from Cloudinary
         const thumbnail = req.file
             ? req.file.path.replace('/upload/', '/upload/w_300,h_200,c_fill/')
-            : 'https://via.placeholder.com/300x200?text=No+Thumbnail';
+            : undefined;
 
         // Create the event
         const event = new Event({
@@ -292,20 +292,24 @@ export const getParticipantUpcomingEvents = async (req, res, next) => {
           status: e.status
         })));
 
-        // Append computedStatus to each event for frontend use if needed
-        const eventsWithComputedStatus = events.map(event => ({
-            ...event.toObject(),
-            computedStatus: event.computedStatus // Access the virtual here
+        // Append computedStatus and registrationCount to each event
+        const eventsWithDetails = await Promise.all(events.map(async (event) => {
+            const registrationCount = await RSVP.countDocuments({ eventId: event._id, status: 'active' });
+            return {
+                ...event.toObject(),
+                computedStatus: event.computedStatus,
+                registrationCount,
+            };
         }));
 
         res.status(200).json({
             metadata: {
-                totalItems: eventsWithComputedStatus.length,
-                totalPages: Math.ceil(eventsWithComputedStatus.length / limit),
+                totalItems: eventsWithDetails.length,
+                totalPages: Math.ceil(eventsWithDetails.length / limit),
                 currentPage: parseInt(page),
                 itemsPerPage: parseInt(limit),
             },
-            events: eventsWithComputedStatus,
+            events: eventsWithDetails,
         });
     } catch (error) {
         next(error); // Pass error to centralized error handler

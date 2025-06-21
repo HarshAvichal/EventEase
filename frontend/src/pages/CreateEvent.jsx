@@ -156,7 +156,7 @@ function CreateEvent() {
             {/* Event Title */}
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Event Title *
+                Event Title
               </Label>
               <Input
                 id="title"
@@ -177,7 +177,7 @@ function CreateEvent() {
             <div className="space-y-2">
               <Label htmlFor="date" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
                 <Calendar className="w-4 h-4 mr-2" />
-                Event Date *
+                Event Date
               </Label>
               <Input
                 id="date"
@@ -198,7 +198,7 @@ function CreateEvent() {
               <div className="space-y-2">
                 <Label htmlFor="startTime" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  Start Time *
+                  Start Time
                 </Label>
                 <Input
                   id="startTime"
@@ -217,7 +217,7 @@ function CreateEvent() {
               <div className="space-y-2">
                 <Label htmlFor="endTime" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  End Time *
+                  End Time
                 </Label>
                 <Input
                   id="endTime"
@@ -238,7 +238,7 @@ function CreateEvent() {
             <div className="space-y-2">
               <Label htmlFor="meetingLink" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center">
                 <Link className="w-4 h-4 mr-2" />
-                Meeting Link (Optional)
+                Meeting Link (Jitsi)
               </Label>
               <Input
                 id="meetingLink"
@@ -260,7 +260,7 @@ function CreateEvent() {
             {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Description *
+                Event Description
               </Label>
               <Textarea
                 id="description"

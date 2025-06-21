@@ -105,7 +105,15 @@ function UpcomingEvents() {
             {events.map(event => (
               <Card key={event._id} className="h-full flex flex-col shadow-lg rounded-xl overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl border border-zinc-200 dark:border-zinc-700" onClick={() => handleCardClick(event._id)}>
                 <div className="h-56 overflow-hidden bg-zinc-200 dark:bg-zinc-800">
-                  <img src={event.thumbnail || '/placeholder.png'} alt={event.title} className="w-full h-full object-cover"/>
+                  <img
+                    src={event.thumbnail || '/no_image.png'}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/no_image.png';
+                    }}
+                    alt={event.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <CardContent className="flex-grow p-4">
                   <h4 className="text-xl font-bold text-indigo-700 dark:text-indigo-400 mb-3 line-clamp-2 leading-tight">{event.title}</h4>

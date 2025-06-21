@@ -83,8 +83,11 @@ function CompletedEvents() {
                 >
                   <div className="relative w-full md:w-48 h-48 md:h-auto flex-shrink-0 bg-zinc-200 dark:bg-zinc-800">
                     <img
-                      src={event.thumbnail || '/placeholder.png'}
-                      onError={(e) => { e.currentTarget.src = '/placeholder.png'; }}
+                      src={event.thumbnail || '/no_image.png'}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/no_image.png';
+                      }}
                       alt={event.title}
                       className="w-full h-full object-cover"
                     />

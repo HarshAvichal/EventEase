@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { convertLocalToUTC, convertUTCToLocal } from '../../utils/dateUtils';
-import { Loader2, Save, X, Upload } from 'lucide-react';
+import { Loader2, Save, X, Upload, Trash2 } from 'lucide-react';
 
 dayjs.extend(customParseFormat);
 
@@ -65,6 +65,15 @@ const EditEventModal = ({ open, onClose, event, onEventUpdate }) => {
     const file = e.target.files[0];
     if (file) {
       setThumbnailFile(file);
+      setForm((prev) => ({ ...prev, thumbnail: 'new-file' }));
+    }
+  };
+
+  const handleRemoveThumbnail = () => {
+    setThumbnailFile(null);
+    setForm((prev) => ({ ...prev, thumbnail: null }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -76,7 +85,7 @@ const EditEventModal = ({ open, onClose, event, onEventUpdate }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      let thumbnailUrl = event.thumbnail; 
+      let thumbnailUrl = form.thumbnail;
 
       if (thumbnailFile) {
         const data = new FormData();
@@ -84,6 +93,10 @@ const EditEventModal = ({ open, onClose, event, onEventUpdate }) => {
         data.append('upload_preset', 'eventease_present');
         const uploadRes = await axios.post('https://api.cloudinary.com/v1_1/da6kpwqmh/image/upload', data);
         thumbnailUrl = uploadRes.data.secure_url;
+      } else if (form.thumbnail === null) {
+        thumbnailUrl = null;
+      } else {
+        thumbnailUrl = event.thumbnail;
       }
       
       const { date: utcDate, time: utcStartTime } = convertLocalToUTC(form.date, form.startTime);
@@ -150,17 +163,23 @@ const EditEventModal = ({ open, onClose, event, onEventUpdate }) => {
             <Textarea id="description" name="description" value={form.description} onChange={handleChange} rows={3} required />
           </div>
           <div className="space-y-2">
-            <Label>Thumbnail (Optional)</Label>
+            <Label>Thumbnail</Label>
             <div className="flex items-center gap-4">
-              <Button type="button" variant="outline" onClick={handleThumbnailButtonClick} className="flex-shrink-0">
+              <input id="thumbnail-upload" type="file" ref={fileInputRef} onChange={handleThumbnailChange} accept="image/*" className="hidden"/>
+              <Button type="button" variant="outline" onClick={handleThumbnailButtonClick}>
                 <Upload className="w-4 h-4 mr-2" />
-                Choose File
+                {thumbnailFile ? 'Change' : 'Upload'}
               </Button>
-              <span className="text-sm text-zinc-500 truncate">
-                {thumbnailFile ? thumbnailFile.name : (form.thumbnail ? 'Current image retained' : 'No file selected')}
-              </span>
+              { (form.thumbnail || thumbnailFile) && (
+                <Button type="button" variant="ghost" size="sm" onClick={handleRemoveThumbnail} className="text-red-500 hover:text-red-600">
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Remove
+                </Button>
+              )}
             </div>
-            <input id="thumbnail-upload" type="file" ref={fileInputRef} onChange={handleThumbnailChange} accept="image/*" className="hidden"/>
+            <p className="text-sm text-zinc-500 mt-2">
+              {thumbnailFile ? `New: ${thumbnailFile.name}` : (form.thumbnail ? 'Current image will be used.' : 'No thumbnail set.')}
+            </p>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button type="button" variant="outline"><X className="w-4 h-4 mr-2" />Cancel</Button></DialogClose>

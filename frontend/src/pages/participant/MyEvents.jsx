@@ -107,8 +107,7 @@ function MyEvents() {
                 return (
               <EventCard
                 key={event._id || event.id}
-                event={{ ...event, _id: event._id || event.id }}
-                participantCount={participantCounts[event._id || event.id]}
+                event={{ ...event, _id: event._id || event.id, registrationCount: participantCounts[event._id || event.id] }}
                 isRSVPd={true}
               />
                 );
@@ -134,8 +133,7 @@ function MyEvents() {
               .map(event => (
               <EventCard
                 key={event._id || event.id}
-                event={{ ...event, _id: event._id || event.id }}
-                participantCount={participantCounts[event._id || event.id]}
+                event={{ ...event, _id: event._id || event.id, registrationCount: participantCounts[event._id || event.id] }}
                 isRSVPd={true}
               />
             ))}
