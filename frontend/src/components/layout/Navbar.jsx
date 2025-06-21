@@ -51,42 +51,41 @@ function Navbar() {
         >
           EventEase
         </Link>
-
-        <div className="flex items-center gap-4">
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-2">
-            {!isAuthenticated && (
-              <>
-                <Link to="/login" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Login</Link>
-                <Link to="/signup" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Signup</Link>
-              </>
-            )}
-            {isAuthenticated && (
-              <>
-                {user && user.role === 'organizer' && (
-                  <Link to="/dashboard/organizer" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Dashboard</Link>
-                )}
-                {user && user.role === 'participant' && (
-                  <Link to="/dashboard/participant" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Dashboard</Link>
-                )}
-                <Link to="/profile" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Profile</Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium"
-                >
-                  Logout
-                </button>
-              </>
-            )}
-          </div>
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden flex items-center justify-center p-2 rounded hover:bg-zinc-800 transition ml-auto"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Open menu"
-          >
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+        
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden flex items-center justify-center p-2 rounded hover:bg-zinc-800 transition"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label="Open menu"
+        >
+          {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+        
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-2">
+          {!isAuthenticated && (
+            <>
+              <Link to="/login" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Login</Link>
+              <Link to="/signup" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Signup</Link>
+            </>
+          )}
+          {isAuthenticated && (
+            <>
+              {user && user.role === 'organizer' && (
+                <Link to="/dashboard/organizer" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Dashboard</Link>
+              )}
+              {user && user.role === 'participant' && (
+                <Link to="/dashboard/participant" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Dashboard</Link>
+              )}
+              <Link to="/profile" className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium">Profile</Link>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-2 rounded hover:bg-zinc-800 transition text-sm font-medium"
+              >
+                Logout
+              </button>
+            </>
+          )}
         </div>
       </div>
       {/* Mobile drawer */}
