@@ -66,8 +66,7 @@ function ResetPassword() {
     setError('');
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/reset-password`, {
-        token,
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/auth/reset-password/${token}`, {
         password: formData.password
       });
 
@@ -86,8 +85,8 @@ function ResetPassword() {
 
   if (isSuccess) {
     return (
-      <div className="max-w-md mx-auto py-8 px-4">
-        <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
+        <Card className="shadow-lg border-zinc-200 dark:border-zinc-700 w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <CheckCircle className="w-16 h-16 text-green-500" />
@@ -113,8 +112,8 @@ function ResetPassword() {
   }
 
   return (
-    <div className="max-w-md mx-auto py-8 px-4">
-      <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+    <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
+      <Card className="shadow-lg border-zinc-200 dark:border-zinc-700 w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
             Reset Password
@@ -149,7 +148,7 @@ function ResetPassword() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-9 text-zinc-500 hover:text-zinc-700"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
             </div>
 
@@ -170,7 +169,7 @@ function ResetPassword() {
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-9 text-zinc-500 hover:text-zinc-700"
               >
-                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showConfirmPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
             </div>
             

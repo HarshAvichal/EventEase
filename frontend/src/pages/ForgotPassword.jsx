@@ -36,8 +36,8 @@ function ForgotPassword() {
       });
 
       if (response.data.success) {
-        setIsSubmitted(true);
         toast.success('Password reset link sent to your email!');
+        setIsSubmitted(true);
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to send reset email. Please try again.';
@@ -55,8 +55,8 @@ function ForgotPassword() {
 
   if (isSubmitted) {
     return (
-      <div className="max-w-md mx-auto py-24 px-4">
-        <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
+        <Card className="shadow-lg border-zinc-200 dark:border-zinc-700 w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <CheckCircle className="w-16 h-16 text-green-500" />
@@ -83,8 +83,8 @@ function ForgotPassword() {
   }
 
   return (
-    <div className="max-w-md mx-auto py-24 px-4">
-      <Card className="shadow-lg border-zinc-200 dark:border-zinc-700">
+    <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
+      <Card className="shadow-lg border-zinc-200 dark:border-zinc-700 w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
             Forgot Password

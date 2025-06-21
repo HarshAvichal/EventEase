@@ -109,12 +109,6 @@ function OrganizerDashboard() {
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 transition-all duration-300 ease-in-out">
         <div className="flex items-center mb-6">
-          <button
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="md:hidden p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 mr-4"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
           <h2 className="text-2xl md:text-3xl font-bold text-zinc-800 dark:text-zinc-100">Organizer Dashboard</h2>
         </div>
         <p className="text-zinc-600 dark:text-zinc-300">Welcome, {user.firstName} {user.lastName}! Use the sidebar to manage your events.</p>

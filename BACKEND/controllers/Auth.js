@@ -359,13 +359,17 @@ export const requestPasswordReset = async (req, res, next) => {
   </div>
 `;
 
-        console.log("Calling sendEmail for:", user.email); // Debug log
-        const emailResult = await sendEmail(user.email, "Password Reset Request - EventEase", emailContent);
-        console.log("sendEmail result:", emailResult); // Debug log
+        // Send email asynchronously and respond immediately
+        sendEmail(user.email, "Password Reset Request - EventEase", emailContent)
+            .then(() => console.log(`Password reset email sent successfully to ${user.email}`))
+            .catch(err => console.error(`Failed to send password reset email to ${user.email}:`, err));
 
-        res.status(200).json({ message: "Password reset instructions sent to your email." });
+        res.status(200).json({ success: true, message: "If an account with this email exists, a password reset link has been sent." });
     } catch (error) {
-        next(error);
+        // To prevent email enumeration attacks, always return a generic success message
+        // unless there's a server-side failure.
+        console.error("Error in requestPasswordReset:", error);
+        res.status(200).json({ success: true, message: "If an account with this email exists, a password reset link has been sent." });
     }
 };
 

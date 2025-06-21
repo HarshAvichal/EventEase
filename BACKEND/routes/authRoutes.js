@@ -30,7 +30,7 @@ router.post("/refresh-token", refreshToken);  // Get new access token using refr
 // ==========================================
 // Password Management Routes
 // ==========================================
-router.post("/request-reset", requestPasswordReset);  // Request password reset
+router.post("/forgot-password", requestPasswordReset);  // Request password reset
 router.post("/reset-password/:token", resetPassword);        // Reset password with token
 
 // ==========================================

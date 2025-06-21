@@ -7,7 +7,7 @@ function Home() {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <div className="max-w-6xl mx-auto py-8 md:py-12 px-4 md:px-6">
+    <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4">
       <div className="text-center max-w-4xl mx-auto">
         <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-indigo-700 dark:text-indigo-400 mb-4 md:mb-6 leading-tight">
           Welcome to EventEase
