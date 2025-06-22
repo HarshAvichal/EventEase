@@ -95,17 +95,15 @@ function EventCard({ event, onRegister, isRSVPd }) {
                  </Button>
               )}
               {status === 'live' && isRSVPd && (
+                <a href={event.meetingLink} target="_blank" rel="noopener noreferrer">
                  <Button
-                    as="a"
-                    href={event.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="bg-green-600 hover:bg-green-700"
                     size="sm"
                   >
                   <Video className="w-4 h-4 mr-2" />
                    Join Live
                  </Button>
+                </a>
               )}
             </div>
           )}

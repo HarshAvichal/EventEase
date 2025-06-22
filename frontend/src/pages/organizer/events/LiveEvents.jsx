@@ -128,7 +128,9 @@ function LiveEvents() {
                   </div>
                   <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4 line-clamp-3">{event.description || 'No description provided.'}</p>
                   <div className="flex gap-3 mt-auto">
-                    <Button className="bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse shadow-lg" href={event.meetingLink || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>LIVE</Button>
+                    <a href={event.meetingLink || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                      <Button className="bg-red-600 hover:bg-red-700 text-white font-bold animate-pulse shadow-lg">LIVE</Button>
+                    </a>
                     <Button variant="outline" className="text-red-600 dark:text-red-400 border-red-600 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-950" disabled={cancelLoading} onClick={(e) => { e.stopPropagation(); handleClickCancel(event._id, event.title); }}><AlertTriangle className="w-4 h-4 mr-1" />{cancelLoading ? 'Canceling...' : 'Cancel'}</Button>
                   </div>
                 </CardContent>
