@@ -43,7 +43,7 @@ function EventCard({ event, onRegister, isRSVPd }) {
 
   return (
     <div className="flex flex-col sm:flex-row bg-white dark:bg-zinc-900 rounded-lg shadow-md overflow-hidden mb-6 border border-zinc-200 dark:border-zinc-700 transition-shadow hover:shadow-lg">
-      <div className="relative w-full sm:w-1/3 h-48 sm:h-auto bg-zinc-200 dark:bg-zinc-800 flex-shrink-0 group">
+      <div className="relative w-full sm:w-64 h-48 sm:h-auto bg-zinc-200 dark:bg-zinc-800 flex-shrink-0 group">
         <img
           src={event.thumbnail || '/no_image.png'}
           onError={(e) => {

@@ -99,36 +99,38 @@ function UpcomingEvents() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Upcoming Events</h2>
-      {events.length === 0 ? (
-        <div className="text-gray-500 text-center">No upcoming events found.</div>
-      ) : (
-        events
-          .filter(event => event.status !== 'canceled')
-          .slice()
-          .sort((a, b) => {
-            const aDate = dayjs(a.date + 'T' + a.startTime);
-            const bDate = dayjs(b.date + 'T' + b.startTime);
-            return aDate.valueOf() - bDate.valueOf(); // earliest first
-          })
-          // Remove events that are currently live
-          .filter(event => {
-            const now = dayjs.utc();
-            const eventStart = dayjs.utc(event.date + 'T' + event.startTime);
-            // Debug: Log filter decision
-            console.log(`Filtering event: ${event.title}, now: ${now.toISOString()}, start: ${eventStart.toISOString()}, show:`, now.isBefore(eventStart));
-            return now.isBefore(eventStart);
-          })
-          .filter(event => !rsvpdLiveEventIds.includes(event._id))
-          .map(event => (
-            <EventCard
-              key={event._id}
-              event={event}
-              participantCount={participantCounts[event._id]}
-              onRegister={() => handleRegister(event._id)}
-              isRSVPd={rsvpdEventIds.includes(event._id)}
-            />
-          ))
-      )}
+      <div className="max-w-4xl mx-auto">
+        {events.length === 0 ? (
+          <div className="text-gray-500 text-center">No upcoming events found.</div>
+        ) : (
+          events
+            .filter(event => event.status !== 'canceled')
+            .slice()
+            .sort((a, b) => {
+              const aDate = dayjs(a.date + 'T' + a.startTime);
+              const bDate = dayjs(b.date + 'T' + b.startTime);
+              return aDate.valueOf() - bDate.valueOf(); // earliest first
+            })
+            // Remove events that are currently live
+            .filter(event => {
+              const now = dayjs.utc();
+              const eventStart = dayjs.utc(event.date + 'T' + event.startTime);
+              // Debug: Log filter decision
+              console.log(`Filtering event: ${event.title}, now: ${now.toISOString()}, start: ${eventStart.toISOString()}, show:`, now.isBefore(eventStart));
+              return now.isBefore(eventStart);
+            })
+            .filter(event => !rsvpdLiveEventIds.includes(event._id))
+            .map(event => (
+              <EventCard
+                key={event._id}
+                event={event}
+                participantCount={participantCounts[event._id]}
+                onRegister={() => handleRegister(event._id)}
+                isRSVPd={rsvpdEventIds.includes(event._id)}
+              />
+            ))
+        )}
+      </div>
     </div>
   );
 }

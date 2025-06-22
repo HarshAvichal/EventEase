@@ -72,7 +72,7 @@ function CompletedEvents() {
             No completed events found.
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-4xl mx-auto">
             {completedEvents
               .slice()
               .sort((a, b) => dayjs(b.date + 'T' + b.endTime).valueOf() - dayjs(a.date + 'T' + a.endTime).valueOf())
@@ -81,7 +81,7 @@ function CompletedEvents() {
                   key={event._id}
                   className="flex flex-col md:flex-row overflow-hidden shadow-md transition-shadow hover:shadow-lg border border-zinc-200 dark:border-zinc-700"
                 >
-                  <div className="relative w-full md:w-48 h-48 md:h-auto flex-shrink-0 bg-zinc-200 dark:bg-zinc-800">
+                  <div className="relative w-full md:w-64 h-48 md:h-auto flex-shrink-0 bg-zinc-200 dark:bg-zinc-800">
                     <img
                       src={event.thumbnail || '/no_image.png'}
                       onError={(e) => {
