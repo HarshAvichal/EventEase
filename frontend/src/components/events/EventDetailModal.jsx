@@ -126,15 +126,17 @@ const EventDetailModal = ({ open, onClose, eventId }) => {
           </DialogClose>
         </DialogHeader>
         
-        {eventDetails?.thumbnail && (
-          <div className="w-full h-72 bg-muted">
-            <img
-              src={eventDetails.thumbnail}
-              alt={eventDetails.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+        <div className="w-full h-72 bg-muted">
+          <img
+            src={eventDetails?.thumbnail || '/no_image.png'}
+            alt={eventDetails?.title || 'Event thumbnail'}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/no_image.png';
+            }}
+            className="w-full h-full object-cover"
+          />
+        </div>
         
         {renderContent()}
       </DialogContent>
