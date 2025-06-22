@@ -105,10 +105,10 @@ function LiveEvents() {
         {liveEvents.length === 0 ? (
           <div className="text-center text-zinc-600 dark:text-zinc-400 py-8">No live events right now.</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {liveEvents.map(event => (
               <Card key={event._id} className="h-full flex flex-col shadow-lg rounded-xl overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-[1.02] hover:shadow-xl border border-zinc-200 dark:border-zinc-700" onClick={() => handleCardClick(event._id)}>
-                <div className="h-72 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                <div className="h-48 overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                   <img
                     src={event.thumbnail || '/no_image.png'}
                     onError={(e) => {
