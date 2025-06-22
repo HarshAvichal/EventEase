@@ -12,7 +12,7 @@ export function corsDebugLogger(req, res, next) {
 const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'http://localhost:3000',
-    'https://event-ease01.vercel.app',
+    'https://event-ease-in.vercel.app',
 ];
 
 const corsOptions = {
