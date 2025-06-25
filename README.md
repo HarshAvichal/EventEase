@@ -2,6 +2,8 @@
 
 EventEase is a modern, full-stack event management platform that enables organizers to create, manage, and promote events, while allowing participants to discover, RSVP, and interact with events in real time.
 
+Live at https://event-ease-in.vercel.app/
+
 ## 🚀 Features
 - User authentication (organizer & participant roles)
 - Create, edit, cancel, and delete events (organizer)
